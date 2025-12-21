@@ -1,0 +1,226 @@
+{
+  "scenarios": [
+    {
+      "id": "cold-call-saas",
+      "name": "Cold Call - SaaS Demo Booking",
+      "description": "Practice cold calling a prospect to book a demo for your SaaS product",
+      "startNodeId": "intro-greeting",
+      "requiredCategorySteps": {
+        "introduction": ["intro-greeting", "intro-value-prop"],
+        "rapport": ["rapport-personalization"],
+        "discovery": ["discovery-pain", "discovery-timeline"],
+        "objection_handling": ["objection-budget", "objection-timing"],
+        "closing": ["closing-next-steps"]
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "id": "intro-greeting",
+      "type": "bot",
+      "label": "Initial Greeting",
+      "category": "introduction",
+      "botResponses": [
+        "Hi there! This is Alex calling from CloudSync. Do you have a quick minute?",
+        "Hello! I'm reaching out because I think there might be a fit between what we do and your team. Do you have a moment?",
+        "Hi! Quick question - are you the right person to talk to about your team's project management tools?"
+      ],
+      "expectedIntents": [
+        { "id": "yes", "label": "Accepts call", "examples": ["sure", "yeah", "yes", "okay", "go ahead"] },
+        { "id": "no", "label": "Declines call", "examples": ["no", "not now", "busy", "call back later"] }
+      ],
+      "transitions": [
+        { "intentId": "yes", "nextNodeId": "intro-value-prop" },
+        { "intentId": "no", "nextNodeId": "terminal-hangup" }
+      ],
+      "clarificationPrompt": "Just checking - do you have time to chat?"
+    },
+    {
+      "id": "intro-value-prop",
+      "type": "bot",
+      "label": "Value Proposition",
+      "category": "introduction",
+      "botResponses": [
+        "Great! We help teams like yours reduce project overhead by about 30%. I'd love to show you how.",
+        "Perfect. So we work with companies to streamline their workflows - most of our clients save about 5 hours per week per team member.",
+        "Awesome. Essentially, we've built a platform that integrates with your existing tools to cut down on manual work."
+      ],
+      "expectedIntents": [
+        {
+          "id": "interested",
+          "label": "Shows interest",
+          "examples": ["interesting", "how", "tell me more", "sounds good"]
+        },
+        { "id": "not_interested", "label": "Not interested", "examples": ["not interested", "sounds bad", "no thanks"] }
+      ],
+      "transitions": [
+        { "intentId": "interested", "nextNodeId": "rapport-personalization" },
+        { "intentId": "not_interested", "nextNodeId": "terminal-decline" }
+      ]
+    },
+    {
+      "id": "rapport-personalization",
+      "type": "bot",
+      "label": "Build Rapport",
+      "category": "rapport",
+      "botResponses": [
+        "I was looking at your LinkedIn - impressive growth this year. How's the team scaling with it?",
+        "I noticed you folks have been pretty active in the space. What's been the biggest challenge as you've grown?",
+        "Your company's doing some cool stuff. What's it like building in such a fast-moving market?"
+      ],
+      "expectedIntents": [
+        { "id": "engages", "label": "Engages in conversation", "examples": ["yeah", "well", "it's", "we", "the"] },
+        { "id": "dismissive", "label": "Dismissive response", "examples": ["whatever", "idk", "doesn't matter"] }
+      ],
+      "transitions": [
+        { "intentId": "engages", "nextNodeId": "discovery-pain" },
+        { "intentId": "dismissive", "nextNodeId": "discovery-pain" }
+      ]
+    },
+    {
+      "id": "discovery-pain",
+      "type": "bot",
+      "label": "Pain Discovery",
+      "category": "discovery",
+      "botResponses": [
+        "What's your biggest pain point when it comes to project coordination right now?",
+        "I'm curious - what's taking up the most time on your plate these days?",
+        "When it comes to team collaboration, where do you lose the most time?"
+      ],
+      "expectedIntents": [
+        {
+          "id": "pain_shared",
+          "label": "Shares a pain point",
+          "examples": ["we have", "it's", "difficult", "struggle", "problem"]
+        },
+        { "id": "no_issues", "label": "Says no issues", "examples": ["we're fine", "no problems", "working well"] }
+      ],
+      "transitions": [
+        { "intentId": "pain_shared", "nextNodeId": "discovery-timeline" },
+        { "intentId": "no_issues", "nextNodeId": "objection-timing" }
+      ]
+    },
+    {
+      "id": "discovery-timeline",
+      "type": "bot",
+      "label": "Timeline Discovery",
+      "category": "discovery",
+      "botResponses": [
+        "Got it. And when are you thinking you'd want to explore solutions for that?",
+        "That makes sense. What's your timeline for looking at tools to help?",
+        "Understood. So if I were to show you something that could address that in the next few weeks, would that be relevant?"
+      ],
+      "expectedIntents": [
+        {
+          "id": "timeline_soon",
+          "label": "Soon/Immediate",
+          "examples": ["soon", "next week", "asap", "immediately", "now"]
+        },
+        {
+          "id": "timeline_later",
+          "label": "Later/Not soon",
+          "examples": ["later", "next quarter", "not sure", "eventually"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "timeline_soon", "nextNodeId": "closing-next-steps" },
+        { "intentId": "timeline_later", "nextNodeId": "objection-timing" }
+      ]
+    },
+    {
+      "id": "objection-timing",
+      "type": "bot",
+      "label": "Handle Timing Objection",
+      "category": "objection_handling",
+      "botResponses": [
+        "I understand - it's not urgent right now. But if things change, would it make sense to stay connected?",
+        "That's fair. Our clients tell us that once they see how much time it saves, they regret not acting sooner. Can I send you a quick demo?",
+        "No worries. Sometimes it takes seeing the impact to realize the priority. Would you be open to a 15-minute call next week?"
+      ],
+      "expectedIntents": [
+        {
+          "id": "accepts_next_step",
+          "label": "Accepts next step",
+          "examples": ["sure", "yes", "okay", "demo sounds good"]
+        },
+        { "id": "declines_next_step", "label": "Declines next step", "examples": ["no", "not really", "pass"] }
+      ],
+      "transitions": [
+        { "intentId": "accepts_next_step", "nextNodeId": "closing-next-steps" },
+        { "intentId": "declines_next_step", "nextNodeId": "terminal-decline" }
+      ]
+    },
+    {
+      "id": "objection-budget",
+      "type": "bot",
+      "label": "Handle Budget Objection",
+      "category": "objection_handling",
+      "botResponses": [
+        "I get it - budget is always a concern. But consider this: if you're saving 5 hours per person per week, that's thousands in productivity gains. How does that sound?",
+        "Budget is definitely important. What if I could show you ROI in the first month?",
+        "That's a valid concern. Most of our clients see payback within 60 days. Would it help to see the numbers?"
+      ],
+      "expectedIntents": [
+        { "id": "accepts_next_step", "label": "Accepts next step", "examples": ["sure", "yes", "okay", "let's talk"] },
+        { "id": "declines_next_step", "label": "Declines next step", "examples": ["no", "too much", "not for us"] }
+      ],
+      "transitions": [
+        { "intentId": "accepts_next_step", "nextNodeId": "closing-next-steps" },
+        { "intentId": "declines_next_step", "nextNodeId": "terminal-decline" }
+      ]
+    },
+    {
+      "id": "closing-next-steps",
+      "type": "bot",
+      "label": "Closing - Next Steps",
+      "category": "closing",
+      "botResponses": [
+        "Excellent! Let me send you a demo link. What's the best email, and when works best for you?",
+        "Perfect! I'll set up a quick 20-minute demo with our team. How does your calendar look next Tuesday or Wednesday?",
+        "Great! Let me get your info and we'll get something on the calendar. What's your preferred time zone?"
+      ],
+      "expectedIntents": [
+        {
+          "id": "books_demo",
+          "label": "Books demo/call",
+          "examples": ["sure", "okay", "yes", "tuesday", "wednesday", "thursday"]
+        },
+        { "id": "unsure", "label": "Unsure", "examples": ["let me check", "maybe", "not sure"] }
+      ],
+      "transitions": [
+        { "intentId": "books_demo", "nextNodeId": "terminal-booked" },
+        { "intentId": "unsure", "nextNodeId": "terminal-maybe" }
+      ]
+    },
+    {
+      "id": "terminal-booked",
+      "type": "terminal",
+      "label": "Demo Booked - Success",
+      "category": "closing",
+      "botResponses": [
+        "Awesome! You'll get a calendar invite shortly. Looking forward to showing you what we can do. Thanks so much!"
+      ]
+    },
+    {
+      "id": "terminal-decline",
+      "type": "terminal",
+      "label": "Prospect Declined",
+      "category": "closing",
+      "botResponses": ["No problem! If things change, feel free to reach out. Have a great day!"]
+    },
+    {
+      "id": "terminal-hangup",
+      "type": "terminal",
+      "label": "Call Hung Up",
+      "category": "introduction",
+      "botResponses": ["Thanks for your time!"]
+    },
+    {
+      "id": "terminal-maybe",
+      "type": "terminal",
+      "label": "Maybe Later",
+      "category": "closing",
+      "botResponses": ["Sure, let me know once you've checked. I'll reach back out next week!"]
+    }
+  ]
+}
