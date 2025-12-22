@@ -16,6 +16,115 @@ export class SpeechToTextService {
   private isListening = false
   private transcript = ""
   private onResultCallback: ((result: SpeechToTextResult) => void) | null = null
+  private recognition: any = null
+  private isSupported = false
+  private silenceTimeout: NodeJS.Timeout | null = null
+  private lastFinalTranscript = ''
+
+  constructor() {
+    // Check if Web Speech API is available
+    if (typeof window !== "undefined") {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      this.isSupported = !!SpeechRecognition
+
+      if (this.isSupported) {
+        this.recognition = new SpeechRecognition()
+        this.recognition.continuous = true
+        this.recognition.interimResults = true
+        this.recognition.lang = 'en-US'
+
+        this.recognition.onresult = (event: any) => {
+          let interimTranscript = ''
+          let finalTranscript = ''
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript
+            const confidence = event.results[i][0].confidence || 0.8
+
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' '
+              this.lastFinalTranscript += finalTranscript
+            } else {
+              interimTranscript += transcript
+            }
+          }
+
+          // Update transcript for display (shows what user is saying in real-time)
+          if (interimTranscript || finalTranscript) {
+            this.transcript = this.lastFinalTranscript + (interimTranscript ? ' ' + interimTranscript : '')
+            // Only show interim results for display, don't process them
+            if (interimTranscript && !finalTranscript) {
+              this.onResultCallback?.({
+                text: this.transcript.trim(),
+                isFinal: false,
+                confidence: 0.8,
+              })
+            }
+          }
+
+          // When we get a final result, wait for additional silence before processing
+          // This ensures the user has completely finished their sentence
+          if (finalTranscript) {
+            // Clear any existing silence timeout
+            if (this.silenceTimeout) {
+              clearTimeout(this.silenceTimeout)
+            }
+            
+            // Wait 2 seconds of silence after final result before processing
+            // This gives the user time to continue speaking if they want
+            this.silenceTimeout = setTimeout(() => {
+              if (this.isListening && this.lastFinalTranscript.trim()) {
+                this.transcript = this.lastFinalTranscript.trim()
+                this.onResultCallback?.({
+                  text: this.transcript.trim(),
+                  isFinal: true,
+                  confidence: 0.95,
+                })
+                // Reset for next sentence
+                this.lastFinalTranscript = ''
+              }
+            }, 2000) // 2 seconds of silence after final result
+          }
+        }
+
+        this.recognition.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error)
+          
+          // Handle specific errors
+          if (event.error === 'not-allowed') {
+            alert('Microphone access denied. Please allow microphone access in your browser settings and refresh the page.')
+            this.stopListening()
+            return
+          }
+          
+          if (event.error === 'no-speech') {
+            // User didn't speak, that's okay
+            return
+          }
+          
+          if (event.error === 'audio-capture') {
+            alert('No microphone found. Please connect a microphone and try again.')
+            this.stopListening()
+            return
+          }
+          
+          // For other errors, stop listening
+          this.stopListening()
+        }
+
+        this.recognition.onend = () => {
+          if (this.isListening) {
+            // Restart if we're still supposed to be listening
+            try {
+              this.recognition.start()
+            } catch (e) {
+              // Already started, ignore
+            }
+          }
+        }
+      }
+    }
+  }
 
   /**
    * Start listening for speech
@@ -25,8 +134,18 @@ export class SpeechToTextService {
     this.transcript = ""
     this.onResultCallback = onResult
 
-    // Mock: Simulate speech recognition after a delay
-    this.mockListeningSession()
+    if (this.isSupported && this.recognition) {
+      try {
+        this.recognition.start()
+      } catch (e) {
+        // Already started, ignore
+        console.warn('Recognition already started')
+      }
+    } else {
+      // Fallback to mock if Web Speech API not supported
+      console.warn('Web Speech API not supported, using mock recognition')
+      this.mockListeningSession()
+    }
   }
 
   /**
@@ -34,11 +153,29 @@ export class SpeechToTextService {
    */
   stopListening(): string {
     this.isListening = false
-    return this.transcript
+    
+    // Clear silence timeout
+    if (this.silenceTimeout) {
+      clearTimeout(this.silenceTimeout)
+      this.silenceTimeout = null
+    }
+    
+    if (this.recognition) {
+      try {
+        this.recognition.stop()
+      } catch (e) {
+        // Already stopped, ignore
+      }
+    }
+
+    // Return the final transcript
+    const finalTranscript = this.transcript.trim() || this.lastFinalTranscript.trim()
+    this.lastFinalTranscript = ''
+    return finalTranscript
   }
 
   /**
-   * Mock listening - simulates a real STT session with gradual text recognition
+   * Mock listening - fallback when Web Speech API is not available
    */
   private mockListeningSession(): void {
     // Simulate user speaking (2-5 seconds of listening)
@@ -93,11 +230,26 @@ export class SpeechToTextService {
 export class TextToSpeechService {
   private isPlaying = false
   private isSupported = typeof window !== "undefined" && "speechSynthesis" in window
+  private useServerTTS = true // Try server-side TTS first
 
   /**
-   * Speak text using the Web Speech API (or mock if unavailable)
+   * Speak text using Coqui TTS server (if available) or Web Speech API (fallback)
    */
   async speak(text: string, options: TextToSpeechOptions = {}): Promise<void> {
+    // Try server-side TTS first if enabled
+    if (this.useServerTTS && typeof window !== "undefined") {
+      try {
+        const audioUrl = await this.speakWithServerTTS(text, options)
+        if (audioUrl) {
+          await this.playAudio(audioUrl)
+          return
+        }
+      } catch (error) {
+        console.warn('Server TTS failed, falling back to Web Speech API:', error)
+      }
+    }
+
+    // Fallback to Web Speech API
     if (!this.isSupported) {
       // Mock: simulate speaking duration
       await this.mockSpeak(text)
@@ -121,6 +273,62 @@ export class TextToSpeechService {
 
       this.isPlaying = true
       window.speechSynthesis.speak(utterance)
+    })
+  }
+
+  /**
+   * Generate speech using server-side Coqui TTS
+   */
+  private async speakWithServerTTS(
+    text: string,
+    options: TextToSpeechOptions
+  ): Promise<string | null> {
+    try {
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text,
+          rate: options.rate || 1.0,
+          pitch: options.pitch || 1.0,
+        }),
+      })
+
+      if (response.headers.get('content-type')?.includes('audio')) {
+        const audioBlob = await response.blob()
+        return URL.createObjectURL(audioBlob)
+      }
+
+      return null
+    } catch (error) {
+      console.error('Server TTS error:', error)
+      return null
+    }
+  }
+
+  /**
+   * Play audio from URL
+   */
+  private playAudio(audioUrl: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const audio = new Audio(audioUrl)
+      this.isPlaying = true
+
+      audio.onended = () => {
+        this.isPlaying = false
+        URL.revokeObjectURL(audioUrl)
+        resolve()
+      }
+
+      audio.onerror = (error) => {
+        this.isPlaying = false
+        URL.revokeObjectURL(audioUrl)
+        reject(error)
+      }
+
+      audio.play().catch(reject)
     })
   }
 
@@ -150,7 +358,7 @@ export class TextToSpeechService {
     })
   }
 
-  isPlaying(): boolean {
+  getIsPlaying(): boolean {
     return this.isPlaying
   }
 }

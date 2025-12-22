@@ -40,6 +40,22 @@ export default function Dashboard() {
 
       {!studentInfoSubmitted && <StudentInfoForm onSubmit={handleStudentInfoSubmit} />}
 
+      {/* Browser Compatibility Notice */}
+      {studentInfoSubmitted && (
+        <div className="max-w-7xl mx-auto mb-4">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 text-sm text-amber-200">
+            <p className="font-semibold mb-1">📢 Microphone Access Required</p>
+            <p>
+              When you click "Start Simulation", your browser will ask for microphone permission. 
+              Please click "Allow" to enable voice recognition. 
+              <span className="block mt-1 text-xs text-amber-300/80">
+                💡 Best experience: Use Chrome, Edge, or Safari. The app will listen to your voice and respond in real-time.
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Report Card Modal */}
       {evaluation && (
         <ReportCard evaluation={evaluation} onNewSimulation={handleNewSimulation} subtitlesEnabled={subtitlesEnabled} />

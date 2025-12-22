@@ -73,9 +73,20 @@ export class DecisionEngine {
     } else if (lastResponseVariationIndex !== undefined && responses.length > 1) {
       // Select a different response than the last one
       const availableIndices = responses.map((_, i) => i).filter((i) => i !== lastResponseVariationIndex)
-      variationIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)]
+      // Safety check: if availableIndices is empty (shouldn't happen, but defensive), fall back to random
+      if (availableIndices.length > 0) {
+        variationIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)]
+      } else {
+        // Fallback: select any random response
+        variationIndex = Math.floor(Math.random() * responses.length)
+      }
     } else {
       variationIndex = Math.floor(Math.random() * responses.length)
+    }
+
+    // Final safety check: ensure variationIndex is valid
+    if (variationIndex < 0 || variationIndex >= responses.length) {
+      variationIndex = 0
     }
 
     return {

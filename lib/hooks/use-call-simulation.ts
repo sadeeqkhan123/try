@@ -35,7 +35,7 @@ export function useCallSimulation() {
   }, [])
 
   const initializeSession = useCallback(() => {
-    const startNodeId = "intro-greeting"
+    const startNodeId = "rapport-opening"
     const sessionManager = sessionManagerRef.current
     const newSession = sessionManager.createSession(`session-${Date.now()}`, startNodeId)
 
@@ -53,74 +53,7 @@ export function useCallSimulation() {
     }
   }, [])
 
-  const handleStartCall = useCallback(async () => {
-    const sessionManager = sessionManagerRef.current
-    const decisionEngine = decisionEngineRef.current
-    const ttsService = ttsServiceRef.current
-
-    sessionManager.setListening(false)
-    sessionManager.setBotSpeaking(true)
-    setSimulatorState(sessionManager.getSimulatorState() || null)
-
-    const currentNodeId = sessionManager.getSimulatorState()?.currentNodeId || "intro-greeting"
-    const node = decisionEngine.getNode(currentNodeId)
-
-    if (node) {
-      const response = decisionEngine.selectBotResponse(currentNodeId)
-      if (response) {
-        await ttsService.speak(response.text, { rate: 0.95 })
-
-        const turn: ConversationTurn = {
-          id: `turn-${Date.now()}`,
-          timestamp: Date.now(),
-          speaker: "bot",
-          text: response.text,
-          nodeId: currentNodeId,
-          selectedResponseVariation: response.variationIndex,
-        }
-
-        sessionManager.addTurn(turn)
-        setTurns((prev) => [...prev, turn])
-
-        sessionManager.setBotSpeaking(false)
-        sessionManager.setListening(true)
-        setSimulatorState(sessionManager.getSimulatorState() || null)
-
-        startListeningSession()
-      }
-    }
-
-    // Start timer
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
-    timerIntervalRef.current = setInterval(() => {
-      sessionManager.incrementElapsedTime()
-      setSimulatorState({ ...sessionManager.getSimulatorState()! })
-    }, 1000)
-  }, [])
-
-  const startListeningSession = useCallback(() => {
-    const sttService = sttServiceRef.current
-    const sessionManager = sessionManagerRef.current
-    const decisionEngine = decisionEngineRef.current
-
-    sttService.startListening((result) => {
-      sessionManager.setCurrentTranscript(result.text)
-      setSimulatorState(sessionManager.getSimulatorState() || null)
-
-      if (result.isFinal) {
-        processFinalTranscript(result.text)
-      }
-    })
-
-    // Auto-stop listening after 8 seconds
-    if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current)
-    listeningTimeoutRef.current = setTimeout(() => {
-      const transcript = sttService.stopListening()
-      if (transcript) {
-        processFinalTranscript(transcript)
-      }
-    }, 8000)
-  }, [])
+  const processFinalTranscriptRef = useRef<((transcript: string) => Promise<void>) | null>(null)
 
   const processFinalTranscript = useCallback(async (transcript: string) => {
     const sessionManager = sessionManagerRef.current
@@ -217,11 +150,93 @@ export function useCallSimulation() {
           sessionManager.setListening(true)
           setSimulatorState(sessionManager.getSimulatorState() || null)
 
-          startListeningSession()
+          // Restart listening
+          const sttService = sttServiceRef.current
+          sttService.startListening((result) => {
+            sessionManager.setCurrentTranscript(result.text)
+            setSimulatorState(sessionManager.getSimulatorState() || null)
+
+            if (result.isFinal && processFinalTranscriptRef.current) {
+              processFinalTranscriptRef.current(result.text)
+            }
+          })
+
+          // Auto-stop listening after 8 seconds
+          if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current)
+          listeningTimeoutRef.current = setTimeout(() => {
+            const transcript = sttService.stopListening()
+            if (transcript && processFinalTranscriptRef.current) {
+              processFinalTranscriptRef.current(transcript)
+            }
+          }, 8000)
         }
       }
     }
   }, [])
+
+  processFinalTranscriptRef.current = processFinalTranscript
+
+  const startListeningSession = useCallback(() => {
+    const sttService = sttServiceRef.current
+    const sessionManager = sessionManagerRef.current
+
+    sttService.startListening((result) => {
+      // Update transcript display in real-time (interim results)
+      sessionManager.setCurrentTranscript(result.text)
+      setSimulatorState(sessionManager.getSimulatorState() || null)
+
+      // Only process FINAL results (after user stops speaking)
+      // This ensures we wait for the user to complete their sentence
+      if (result.isFinal && processFinalTranscriptRef.current) {
+        // Add a small delay to ensure the user has truly finished
+        setTimeout(() => {
+          if (processFinalTranscriptRef.current) {
+            processFinalTranscriptRef.current(result.text)
+          }
+        }, 500) // 500ms delay after final result to ensure completion
+      }
+    })
+
+    // Auto-stop listening after 10 seconds of no speech (increased from 8)
+    if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current)
+    listeningTimeoutRef.current = setTimeout(() => {
+      const transcript = sttService.stopListening()
+      if (transcript && processFinalTranscriptRef.current) {
+        // Wait a moment before processing to ensure user is done
+        setTimeout(() => {
+          if (processFinalTranscriptRef.current) {
+            processFinalTranscriptRef.current(transcript)
+          }
+        }, 500)
+      }
+    }, 10000) // Increased to 10 seconds
+  }, [])
+
+  const handleStartCall = useCallback(async () => {
+    const sessionManager = sessionManagerRef.current
+
+    // Activate the call first
+    const simulatorState = sessionManager.getSimulatorState()
+    if (simulatorState) {
+      simulatorState.callActive = true
+    }
+    
+    // Sales agent (user) should speak first, not the AI prospect
+    // So we start listening immediately for the user's opening
+    sessionManager.setListening(true)
+    sessionManager.setBotSpeaking(false)
+    setSimulatorState(sessionManager.getSimulatorState() || null)
+
+    // Start listening for user input (sales agent's opening)
+    startListeningSession()
+
+    // Start timer
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
+    timerIntervalRef.current = setInterval(() => {
+      sessionManager.incrementElapsedTime()
+      setSimulatorState({ ...sessionManager.getSimulatorState()! })
+    }, 1000)
+  }, [startListeningSession])
 
   const handleStopCall = useCallback(async () => {
     const sessionManager = sessionManagerRef.current

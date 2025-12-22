@@ -2,225 +2,558 @@
   "scenarios": [
     {
       "id": "cold-call-saas",
-      "name": "Cold Call - SaaS Demo Booking",
-      "description": "Practice cold calling a prospect to book a demo for your SaaS product",
-      "startNodeId": "intro-greeting",
+      "name": "Sales Training Call - Full Flow",
+      "description": "Complete sales training flow following HTS methodology - User is sales agent, AI is prospect",
+      "startNodeId": "rapport-opening",
       "requiredCategorySteps": {
-        "introduction": ["intro-greeting", "intro-value-prop"],
-        "rapport": ["rapport-personalization"],
-        "discovery": ["discovery-pain", "discovery-timeline"],
-        "objection_handling": ["objection-budget", "objection-timing"],
-        "closing": ["closing-next-steps"]
+        "rapport": ["rapport-opening", "rapport-desired-outcome"],
+        "exploratory": ["exploratory-current-situation", "exploratory-problem-building"],
+        "alignment": ["alignment-past-actions"],
+        "success": ["success-buying-values", "success-dream-state"],
+        "reality_check": ["reality-check-gap", "reality-check-consequence"],
+        "presentation": ["presentation-pillar-1", "presentation-pillar-2", "presentation-pillar-3"],
+        "objection_handling": ["objection-logistical", "objection-fear"],
+        "closing": ["closing-commitment"]
       }
     }
   ],
   "nodes": [
     {
-      "id": "intro-greeting",
-      "type": "bot",
-      "label": "Initial Greeting",
-      "category": "introduction",
-      "botResponses": [
-        "Hi there! This is Alex calling from CloudSync. Do you have a quick minute?",
-        "Hello! I'm reaching out because I think there might be a fit between what we do and your team. Do you have a moment?",
-        "Hi! Quick question - are you the right person to talk to about your team's project management tools?"
-      ],
-      "expectedIntents": [
-        { "id": "yes", "label": "Accepts call", "examples": ["sure", "yeah", "yes", "okay", "go ahead"] },
-        { "id": "no", "label": "Declines call", "examples": ["no", "not now", "busy", "call back later"] }
-      ],
-      "transitions": [
-        { "intentId": "yes", "nextNodeId": "intro-value-prop" },
-        { "intentId": "no", "nextNodeId": "terminal-hangup" }
-      ],
-      "clarificationPrompt": "Just checking - do you have time to chat?"
-    },
-    {
-      "id": "intro-value-prop",
-      "type": "bot",
-      "label": "Value Proposition",
-      "category": "introduction",
-      "botResponses": [
-        "Great! We help teams like yours reduce project overhead by about 30%. I'd love to show you how.",
-        "Perfect. So we work with companies to streamline their workflows - most of our clients save about 5 hours per week per team member.",
-        "Awesome. Essentially, we've built a platform that integrates with your existing tools to cut down on manual work."
-      ],
-      "expectedIntents": [
-        {
-          "id": "interested",
-          "label": "Shows interest",
-          "examples": ["interesting", "how", "tell me more", "sounds good"]
-        },
-        { "id": "not_interested", "label": "Not interested", "examples": ["not interested", "sounds bad", "no thanks"] }
-      ],
-      "transitions": [
-        { "intentId": "interested", "nextNodeId": "rapport-personalization" },
-        { "intentId": "not_interested", "nextNodeId": "terminal-decline" }
-      ]
-    },
-    {
-      "id": "rapport-personalization",
-      "type": "bot",
-      "label": "Build Rapport",
+      "id": "rapport-opening",
+      "type": "user_decision",
+      "label": "Sales Agent Opens Call",
       "category": "rapport",
-      "botResponses": [
-        "I was looking at your LinkedIn - impressive growth this year. How's the team scaling with it?",
-        "I noticed you folks have been pretty active in the space. What's been the biggest challenge as you've grown?",
-        "Your company's doing some cool stuff. What's it like building in such a fast-moving market?"
-      ],
-      "expectedIntents": [
-        { "id": "engages", "label": "Engages in conversation", "examples": ["yeah", "well", "it's", "we", "the"] },
-        { "id": "dismissive", "label": "Dismissive response", "examples": ["whatever", "idk", "doesn't matter"] }
-      ],
-      "transitions": [
-        { "intentId": "engages", "nextNodeId": "discovery-pain" },
-        { "intentId": "dismissive", "nextNodeId": "discovery-pain" }
-      ]
-    },
-    {
-      "id": "discovery-pain",
-      "type": "bot",
-      "label": "Pain Discovery",
-      "category": "discovery",
-      "botResponses": [
-        "What's your biggest pain point when it comes to project coordination right now?",
-        "I'm curious - what's taking up the most time on your plate these days?",
-        "When it comes to team collaboration, where do you lose the most time?"
-      ],
+      "botResponses": [],
       "expectedIntents": [
         {
-          "id": "pain_shared",
-          "label": "Shares a pain point",
-          "examples": ["we have", "it's", "difficult", "struggle", "problem"]
-        },
-        { "id": "no_issues", "label": "Says no issues", "examples": ["we're fine", "no problems", "working well"] }
-      ],
-      "transitions": [
-        { "intentId": "pain_shared", "nextNodeId": "discovery-timeline" },
-        { "intentId": "no_issues", "nextNodeId": "objection-timing" }
-      ]
-    },
-    {
-      "id": "discovery-timeline",
-      "type": "bot",
-      "label": "Timeline Discovery",
-      "category": "discovery",
-      "botResponses": [
-        "Got it. And when are you thinking you'd want to explore solutions for that?",
-        "That makes sense. What's your timeline for looking at tools to help?",
-        "Understood. So if I were to show you something that could address that in the next few weeks, would that be relevant?"
-      ],
-      "expectedIntents": [
-        {
-          "id": "timeline_soon",
-          "label": "Soon/Immediate",
-          "examples": ["soon", "next week", "asap", "immediately", "now"]
-        },
-        {
-          "id": "timeline_later",
-          "label": "Later/Not soon",
-          "examples": ["later", "next quarter", "not sure", "eventually"]
+          "id": "agent_greets",
+          "label": "Sales agent greets and opens",
+          "examples": ["hey", "hi", "hello", "thanks for taking my call", "i wanted to", "i'm calling about", "it looks like you booked", "you scheduled"]
         }
       ],
       "transitions": [
-        { "intentId": "timeline_soon", "nextNodeId": "closing-next-steps" },
-        { "intentId": "timeline_later", "nextNodeId": "objection-timing" }
-      ]
+        { "intentId": "agent_greets", "nextNodeId": "rapport-prospect-response" }
+      ],
+      "clarificationPrompt": "The sales agent should greet the prospect and open the call. Example: 'Hey [NAME]? It looks like you booked on my calendar today about...'"
     },
     {
-      "id": "objection-timing",
+      "id": "rapport-prospect-response",
       "type": "bot",
-      "label": "Handle Timing Objection",
-      "category": "objection_handling",
+      "label": "Prospect Initial Response",
+      "category": "rapport",
       "botResponses": [
-        "I understand - it's not urgent right now. But if things change, would it make sense to stay connected?",
-        "That's fair. Our clients tell us that once they see how much time it saves, they regret not acting sooner. Can I send you a quick demo?",
-        "No worries. Sometimes it takes seeing the impact to realize the priority. Would you be open to a 15-minute call next week?"
+        "Hey, yeah I booked a call. What's this about?",
+        "Hi, yes I scheduled this. Can you tell me what you do?",
+        "Yeah, I'm here. I saw something about this online and wanted to learn more.",
+        "Yeah, I booked it. I'm just looking to see what you do, honestly."
       ],
       "expectedIntents": [
         {
-          "id": "accepts_next_step",
-          "label": "Accepts next step",
-          "examples": ["sure", "yes", "okay", "demo sounds good"]
+          "id": "asks_desired_outcome",
+          "label": "Agent asks about desired outcome",
+          "examples": ["what are you looking to achieve", "what's your goal", "what do you want", "what are you trying to accomplish", "what's important to you", "what did you see", "what made you want"]
         },
-        { "id": "declines_next_step", "label": "Declines next step", "examples": ["no", "not really", "pass"] }
+        {
+          "id": "shifts_to_need",
+          "label": "Agent shifts want to need",
+          "examples": ["what do you need help with", "what support do you need", "what are you struggling with", "what's challenging you"]
+        }
       ],
       "transitions": [
-        { "intentId": "accepts_next_step", "nextNodeId": "closing-next-steps" },
-        { "intentId": "declines_next_step", "nextNodeId": "terminal-decline" }
-      ]
+        { "intentId": "asks_desired_outcome", "nextNodeId": "rapport-desired-outcome-response" },
+        { "intentId": "shifts_to_need", "nextNodeId": "rapport-desired-outcome-response" }
+      ],
+      "defaultNextNodeId": "rapport-desired-outcome-response"
     },
     {
-      "id": "objection-budget",
+      "id": "rapport-desired-outcome",
       "type": "bot",
-      "label": "Handle Budget Objection",
-      "category": "objection_handling",
+      "label": "Prospect Responds - Need Discovery",
+      "category": "rapport",
       "botResponses": [
-        "I get it - budget is always a concern. But consider this: if you're saving 5 hours per person per week, that's thousands in productivity gains. How does that sound?",
-        "Budget is definitely important. What if I could show you ROI in the first month?",
-        "That's a valid concern. Most of our clients see payback within 60 days. Would it help to see the numbers?"
+        "I'm just looking to see what you do, honestly.",
+        "I saw your ad and wanted to check it out. What is it you help with?",
+        "I'm curious about your program. Can you tell me more?",
+        "I'm not really sure what I need help with yet, just exploring options."
       ],
       "expectedIntents": [
-        { "id": "accepts_next_step", "label": "Accepts next step", "examples": ["sure", "yes", "okay", "let's talk"] },
-        { "id": "declines_next_step", "label": "Declines next step", "examples": ["no", "too much", "not for us"] }
+        {
+          "id": "asks_desired_outcome",
+          "label": "Agent asks about desired outcome",
+          "examples": ["what are you looking to achieve", "what's your goal", "what do you want", "what are you trying to accomplish", "what's important to you"]
+        },
+        {
+          "id": "shifts_to_need",
+          "label": "Agent shifts want to need",
+          "examples": ["what do you need help with", "what support do you need", "what are you struggling with", "what's challenging you"]
+        }
       ],
       "transitions": [
-        { "intentId": "accepts_next_step", "nextNodeId": "closing-next-steps" },
-        { "intentId": "declines_next_step", "nextNodeId": "terminal-decline" }
-      ]
+        { "intentId": "asks_desired_outcome", "nextNodeId": "rapport-desired-outcome-response" },
+        { "intentId": "shifts_to_need", "nextNodeId": "rapport-desired-outcome-response" }
+      ],
+      "defaultNextNodeId": "rapport-desired-outcome-response"
     },
     {
-      "id": "closing-next-steps",
+      "id": "rapport-desired-outcome-response",
       "type": "bot",
-      "label": "Closing - Next Steps",
+      "label": "Prospect Shares Desired Outcome",
+      "category": "rapport",
+      "botResponses": [
+        "I want to make more money, I guess.",
+        "I'm looking to increase my revenue.",
+        "I want financial freedom, you know?",
+        "I'd like to make $10k a month so I can take care of my family.",
+        "I'm not really sure what I'm looking for yet."
+      ],
+      "expectedIntents": [
+        {
+          "id": "probes_why",
+          "label": "Agent probes why that's important",
+          "examples": ["why is that important", "why do you want that", "what's so important about", "why that specifically"]
+        },
+        {
+          "id": "gets_tangible",
+          "label": "Agent gets tangible problem",
+          "examples": ["what do you need help with", "what support do you need", "what are you struggling with", "what's the main thing"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "probes_why", "nextNodeId": "exploratory-current-situation" },
+        { "intentId": "gets_tangible", "nextNodeId": "exploratory-current-situation" }
+      ],
+      "defaultNextNodeId": "exploratory-current-situation"
+    },
+    {
+      "id": "exploratory-current-situation",
+      "type": "bot",
+      "label": "Prospect Shares Current Situation",
+      "category": "exploratory",
+      "botResponses": [
+        "I'm working at a regular job right now, just trying to figure out how to make more.",
+        "I've been trying to do this on my own but I'm not getting the results I want.",
+        "My sales calls don't end well. I only close at like 10% and lose sales to objections.",
+        "I'm using some free stuff I found online, but it's not really working.",
+        "I haven't really invested in anything yet, just trying to learn on my own."
+      ],
+      "expectedIntents": [
+        {
+          "id": "asks_how_long",
+          "label": "Agent asks how long",
+          "examples": ["how long have you been", "how long has that been", "when did you start", "how long"]
+        },
+        {
+          "id": "asks_current_process",
+          "label": "Agent asks about current process",
+          "examples": ["what are you currently using", "what do you do now", "what's your current process", "what are you doing"]
+        },
+        {
+          "id": "probes_problem",
+          "label": "Agent probes the problem",
+          "examples": ["what's causing that", "why do you think that's happening", "what's the issue", "what's the problem"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "asks_how_long", "nextNodeId": "exploratory-problem-building" },
+        { "intentId": "asks_current_process", "nextNodeId": "exploratory-problem-building" },
+        { "intentId": "probes_problem", "nextNodeId": "exploratory-problem-building" }
+      ],
+      "defaultNextNodeId": "exploratory-problem-building"
+    },
+    {
+      "id": "exploratory-problem-building",
+      "type": "bot",
+      "label": "Prospect Acknowledges Problem",
+      "category": "exploratory",
+      "botResponses": [
+        "I don't really have a system in place. I'm just winging it.",
+        "I don't know how to handle objections properly, that's the main issue.",
+        "I haven't invested in proper training, just free stuff.",
+        "I don't have the knowledge I need. I'm missing key skills.",
+        "I guess I don't have anything really set up to solve this."
+      ],
+      "expectedIntents": [
+        {
+          "id": "builds_gap",
+          "label": "Agent builds gap between current and desired",
+          "examples": ["do you see how", "can you see that", "does that make sense", "do you understand"]
+        },
+        {
+          "id": "links_cause_impact",
+          "label": "Agent links cause to impact",
+          "examples": ["so by not having", "because you don't have", "since you're missing", "the reason you're getting"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "builds_gap", "nextNodeId": "alignment-past-actions" },
+        { "intentId": "links_cause_impact", "nextNodeId": "alignment-past-actions" }
+      ],
+      "defaultNextNodeId": "alignment-past-actions"
+    },
+    {
+      "id": "alignment-past-actions",
+      "type": "bot",
+      "label": "Prospect Shares Past Actions",
+      "category": "alignment",
+      "botResponses": [
+        "I haven't really done anything besides YouTube videos and free stuff.",
+        "I tried a program before but it didn't work out.",
+        "I invested in something similar a while back, spent a few thousand.",
+        "It's never really been a priority until now.",
+        "I thought I could figure it out on my own, but I'm stuck."
+      ],
+      "expectedIntents": [
+        {
+          "id": "probes_past_investment",
+          "label": "Agent probes past investment experience",
+          "examples": ["how did that work", "what happened", "why didn't it work", "what was missing", "what prevented you"]
+        },
+        {
+          "id": "challenges_priority",
+          "label": "Agent challenges priority/commitment",
+          "examples": ["how important is this", "how committed are you", "why now", "what shifted", "how serious"]
+        },
+        {
+          "id": "builds_commitment",
+          "label": "Agent builds commitment narrative",
+          "examples": ["which person are you", "are you committed", "how committed", "what kind of person"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "probes_past_investment", "nextNodeId": "success-buying-values" },
+        { "intentId": "challenges_priority", "nextNodeId": "success-buying-values" },
+        { "intentId": "builds_commitment", "nextNodeId": "success-buying-values" }
+      ],
+      "defaultNextNodeId": "success-buying-values"
+    },
+    {
+      "id": "success-buying-values",
+      "type": "bot",
+      "label": "Prospect Identifies Buying Values",
+      "category": "success",
+      "botResponses": [
+        "I need help with handling objections better. That's my biggest weakness.",
+        "I want someone to look over my shoulder and give me feedback on my calls.",
+        "I need a step-by-step system I can follow.",
+        "I want access to a mentor who's actually done this successfully.",
+        "I'm looking for group calls where I can get my calls reviewed."
+      ],
+      "expectedIntents": [
+        {
+          "id": "gets_specific",
+          "label": "Agent gets specific on buying values",
+          "examples": ["how do you mean", "what specifically", "can you clarify", "tell me more about", "what exactly"]
+        },
+        {
+          "id": "builds_dream_state",
+          "label": "Agent builds dream state",
+          "examples": ["if you could fast forward", "imagine a year from now", "what would that look like", "how would things be different", "what would that make you feel"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "gets_specific", "nextNodeId": "success-dream-state" },
+        { "intentId": "builds_dream_state", "nextNodeId": "success-dream-state" }
+      ],
+      "defaultNextNodeId": "success-dream-state"
+    },
+    {
+      "id": "success-dream-state",
+      "type": "bot",
+      "label": "Prospect Describes Dream State",
+      "category": "success",
+      "botResponses": [
+        "I'd be making $10k a month and feel confident in my abilities.",
+        "I'd be the guy who can close deals consistently and provide for my family.",
+        "I'd feel successful and in control of my income.",
+        "I'd look in the mirror and feel confident every day.",
+        "I'd have financial freedom and not stress about money."
+      ],
+      "expectedIntents": [
+        {
+          "id": "builds_emotional_gap",
+          "label": "Agent builds emotional gap",
+          "examples": ["how do you feel now", "compared to that", "what's the difference", "how does that compare"]
+        },
+        {
+          "id": "moves_to_reality",
+          "label": "Agent moves to reality check",
+          "examples": ["how close are you", "where are you now", "what's your current situation", "how far away"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "builds_emotional_gap", "nextNodeId": "reality-check-gap" },
+        { "intentId": "moves_to_reality", "nextNodeId": "reality-check-gap" }
+      ],
+      "defaultNextNodeId": "reality-check-gap"
+    },
+    {
+      "id": "reality-check-gap",
+      "type": "bot",
+      "label": "Prospect Acknowledges Gap",
+      "category": "reality_check",
+      "botResponses": [
+        "I'm pretty far away, honestly. Maybe at a 2 or 3 out of 10.",
+        "Not very close. I'm struggling right now.",
+        "I'm nowhere near where I want to be.",
+        "I feel like I'm stuck and not making progress."
+      ],
+      "expectedIntents": [
+        {
+          "id": "asks_consequence",
+          "label": "Agent asks about consequence of inaction",
+          "examples": ["what happens if", "what if you never", "what if nothing changes", "where does that leave you", "what's the cost"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "asks_consequence", "nextNodeId": "reality-check-consequence" }
+      ],
+      "defaultNextNodeId": "reality-check-consequence"
+    },
+    {
+      "id": "reality-check-consequence",
+      "type": "bot",
+      "label": "Prospect Acknowledges Consequences",
+      "category": "reality_check",
+      "botResponses": [
+        "I'd still be stuck in the same place, making the same money.",
+        "I'd never achieve what I want. I'd keep struggling.",
+        "Things would just get worse. I can't let that happen.",
+        "I don't want to settle for that life. I need to make a change."
+      ],
+      "expectedIntents": [
+        {
+          "id": "presents_solution",
+          "label": "Agent presents solution",
+          "examples": ["let me show you", "here's how we help", "we have a process", "let me walk you through", "with your permission"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "presents_solution", "nextNodeId": "presentation-pillar-1" }
+      ],
+      "defaultNextNodeId": "presentation-pillar-1"
+    },
+    {
+      "id": "presentation-pillar-1",
+      "type": "bot",
+      "label": "Prospect Responds to Pillar 1",
+      "category": "presentation",
+      "botResponses": [
+        "That sounds good. Makes sense.",
+        "Okay, I'm following you.",
+        "Yeah, that would help with the problem I mentioned.",
+        "I see how that addresses what I need."
+      ],
+      "expectedIntents": [
+        {
+          "id": "presents_pillar_2",
+          "label": "Agent presents pillar 2",
+          "examples": ["pillar 2", "second thing", "next part", "also", "additionally"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "presents_pillar_2", "nextNodeId": "presentation-pillar-2" }
+      ],
+      "defaultNextNodeId": "presentation-pillar-2"
+    },
+    {
+      "id": "presentation-pillar-2",
+      "type": "bot",
+      "label": "Prospect Responds to Pillar 2",
+      "category": "presentation",
+      "botResponses": [
+        "That's exactly what I was looking for.",
+        "That addresses the issue I mentioned earlier.",
+        "Okay, I understand how that helps.",
+        "That makes sense for my situation."
+      ],
+      "expectedIntents": [
+        {
+          "id": "presents_pillar_3",
+          "label": "Agent presents pillar 3",
+          "examples": ["pillar 3", "third thing", "finally", "last part", "and then"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "presents_pillar_3", "nextNodeId": "presentation-pillar-3" }
+      ],
+      "defaultNextNodeId": "presentation-pillar-3"
+    },
+    {
+      "id": "presentation-pillar-3",
+      "type": "bot",
+      "label": "Prospect Responds to Pillar 3",
+      "category": "presentation",
+      "botResponses": [
+        "I can see how this could help me.",
+        "This sounds like what I need.",
+        "I'm interested, but I need to think about it.",
+        "This makes sense, but I don't have the money right now.",
+        "I'd need to talk to my partner first."
+      ],
+      "expectedIntents": [
+        {
+          "id": "asks_scale",
+          "label": "Agent asks scale question",
+          "examples": ["on a scale of 1-10", "how do you feel", "where are you", "rate this", "scale"]
+        },
+        {
+          "id": "presents_investment",
+          "label": "Agent presents investment",
+          "examples": ["investment", "cost", "price", "program is", "to get you to"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "asks_scale", "nextNodeId": "objection-logistical" },
+        { "intentId": "presents_investment", "nextNodeId": "objection-logistical" }
+      ],
+      "defaultNextNodeId": "objection-logistical"
+    },
+    {
+      "id": "objection-logistical",
+      "type": "bot",
+      "label": "Prospect Raises Objection",
+      "category": "objection_handling",
+      "botResponses": [
+        "I don't have the money right now. It's tight.",
+        "I need to think about it first.",
+        "I have to talk to my partner about this.",
+        "I don't have the time to commit to this right now.",
+        "Aside from the money, this sounds good.",
+        "I'm interested, but I'm not sure if I can do it."
+      ],
+      "expectedIntents": [
+        {
+          "id": "isolates_objection",
+          "label": "Agent isolates objection",
+          "examples": ["aside from", "money aside", "time aside", "partner aside", "if you had", "would you do it"]
+        },
+        {
+          "id": "handles_money",
+          "label": "Agent handles money objection",
+          "examples": ["money", "investment", "cost", "payment", "budget"]
+        },
+        {
+          "id": "handles_time",
+          "label": "Agent handles time objection",
+          "examples": ["time", "busy", "schedule", "commitment", "when"]
+        },
+        {
+          "id": "handles_partner",
+          "label": "Agent handles partner objection",
+          "examples": ["partner", "spouse", "wife", "husband", "talk to"]
+        },
+        {
+          "id": "handles_think",
+          "label": "Agent handles think about it",
+          "examples": ["think about it", "need to think", "consider", "decide"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "isolates_objection", "nextNodeId": "objection-fear" },
+        { "intentId": "handles_money", "nextNodeId": "objection-fear" },
+        { "intentId": "handles_time", "nextNodeId": "objection-fear" },
+        { "intentId": "handles_partner", "nextNodeId": "objection-fear" },
+        { "intentId": "handles_think", "nextNodeId": "objection-fear" }
+      ],
+      "defaultNextNodeId": "objection-fear"
+    },
+    {
+      "id": "objection-fear",
+      "type": "bot",
+      "label": "Prospect Expresses Fear/Uncertainty",
+      "category": "objection_handling",
+      "botResponses": [
+        "I'm just not sure if this will work for me.",
+        "I've been burned before by programs like this.",
+        "I don't know if I can actually do this.",
+        "I'm worried I won't follow through.",
+        "I'm not certain this is the right fit.",
+        "If I knew for sure it would work, I'd do it."
+      ],
+      "expectedIntents": [
+        {
+          "id": "handles_uncertainty",
+          "label": "Agent handles uncertainty",
+          "examples": ["if you knew", "certainty", "uncertainty", "trust", "believe", "confidence"]
+        },
+        {
+          "id": "challenges_identity",
+          "label": "Agent challenges identity/mindset",
+          "examples": ["who are you", "what kind of person", "which person", "valley", "summit", "perspective"]
+        },
+        {
+          "id": "asks_commitment",
+          "label": "Agent asks for commitment",
+          "examples": ["how committed", "are you ready", "what are you going to do", "are you going to", "will you"]
+        }
+      ],
+      "transitions": [
+        { "intentId": "handles_uncertainty", "nextNodeId": "closing-commitment" },
+        { "intentId": "challenges_identity", "nextNodeId": "closing-commitment" },
+        { "intentId": "asks_commitment", "nextNodeId": "closing-commitment" }
+      ],
+      "defaultNextNodeId": "closing-commitment"
+    },
+    {
+      "id": "closing-commitment",
+      "type": "bot",
+      "label": "Prospect Commits or Declines",
       "category": "closing",
       "botResponses": [
-        "Excellent! Let me send you a demo link. What's the best email, and when works best for you?",
-        "Perfect! I'll set up a quick 20-minute demo with our team. How does your calendar look next Tuesday or Wednesday?",
-        "Great! Let me get your info and we'll get something on the calendar. What's your preferred time zone?"
+        "Okay, I'm in. Let's do this.",
+        "Yes, I'm ready to commit. How do we get started?",
+        "I need to do something. Sign me up.",
+        "I'm still not sure. Can I think about it?",
+        "I think I need more time to decide."
       ],
       "expectedIntents": [
         {
-          "id": "books_demo",
-          "label": "Books demo/call",
-          "examples": ["sure", "okay", "yes", "tuesday", "wednesday", "thursday"]
+          "id": "closes_deal",
+          "label": "Agent closes the deal",
+          "examples": ["let's get started", "how do you want to pay", "let's do this", "are you ready", "let's move forward"]
         },
-        { "id": "unsure", "label": "Unsure", "examples": ["let me check", "maybe", "not sure"] }
+        {
+          "id": "handles_final_objection",
+          "label": "Agent handles final objection",
+          "examples": ["what's stopping you", "what do you need", "what's the hesitation", "why not now"]
+        }
       ],
       "transitions": [
-        { "intentId": "books_demo", "nextNodeId": "terminal-booked" },
-        { "intentId": "unsure", "nextNodeId": "terminal-maybe" }
-      ]
+        { "intentId": "closes_deal", "nextNodeId": "terminal-booked" },
+        { "intentId": "handles_final_objection", "nextNodeId": "objection-fear" }
+      ],
+      "defaultNextNodeId": "terminal-booked"
     },
     {
       "id": "terminal-booked",
       "type": "terminal",
-      "label": "Demo Booked - Success",
+      "label": "Call Completed - Deal Closed",
       "category": "closing",
       "botResponses": [
-        "Awesome! You'll get a calendar invite shortly. Looking forward to showing you what we can do. Thanks so much!"
+        "Perfect! I'm excited to get started. Looking forward to working with you!",
+        "Great! I'm ready to commit. Let's make this happen!",
+        "Awesome! I'm in. Can't wait to get started on this journey."
       ]
     },
     {
       "id": "terminal-decline",
       "type": "terminal",
-      "label": "Prospect Declined",
+      "label": "Call Ended - Prospect Declined",
       "category": "closing",
-      "botResponses": ["No problem! If things change, feel free to reach out. Have a great day!"]
+      "botResponses": [
+        "I understand. Thanks for your time today. Maybe we can reconnect later.",
+        "No problem. I appreciate you taking the time to talk with me.",
+        "Okay, I get it. Thanks anyway. Have a good day."
+      ]
     },
     {
       "id": "terminal-hangup",
       "type": "terminal",
       "label": "Call Hung Up",
       "category": "introduction",
-      "botResponses": ["Thanks for your time!"]
-    },
-    {
-      "id": "terminal-maybe",
-      "type": "terminal",
-      "label": "Maybe Later",
-      "category": "closing",
-      "botResponses": ["Sure, let me know once you've checked. I'll reach back out next week!"]
+      "botResponses": [
+        "Thanks for your time!"
+      ]
     }
   ]
 }

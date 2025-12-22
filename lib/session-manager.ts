@@ -17,7 +17,7 @@ export class SessionManager {
     this.simulatorState = {
       currentNodeId: startNodeId,
       sessionId,
-      callActive: true,
+      callActive: false, // Start inactive, user must click "Start Simulation"
       isListening: false,
       isProcessing: false,
       isBotSpeaking: false,
@@ -103,5 +103,23 @@ export class SessionManager {
   resetSession(): void {
     this.session = null
     this.simulatorState = null
+  }
+
+  /**
+   * Sync session from external source (e.g., session store)
+   * This ensures SessionManager's internal state matches the store
+   * Note: Direct assignment keeps both references pointing to the same object,
+   * which is desired for in-memory storage to keep everything in sync
+   */
+  syncSession(session: CallSession): void {
+    this.session = session
+    if (this.simulatorState) {
+      // Safely get the current node ID
+      const currentNodeId = session.nodePathTraversed && session.nodePathTraversed.length > 0
+        ? session.nodePathTraversed[session.nodePathTraversed.length - 1]
+        : ''
+      this.simulatorState.currentNodeId = currentNodeId
+      this.simulatorState.callActive = !session.isTerminal
+    }
   }
 }
