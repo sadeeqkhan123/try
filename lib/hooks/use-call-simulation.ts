@@ -42,7 +42,7 @@ export function useCallSimulation() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          scenarioId: 'cold-call-saas',
+          scenarioId: 'mortgage-sales-training',
         }),
       })
 
@@ -153,7 +153,12 @@ export function useCallSimulation() {
       sessionManager.setProcessing(false)
       setSimulatorState(sessionManager.getSimulatorState() || null)
 
-      await ttsService.speak(aiResponse, { rate: 0.95 })
+      try {
+        await ttsService.speak(aiResponse, { rate: 0.95 })
+      } catch (error) {
+        console.error('Error speaking AI response:', error)
+        // Continue even if TTS fails
+      }
 
       const botTurn: ConversationTurn = {
         id: `turn-${Date.now()}`,
@@ -180,7 +185,7 @@ export function useCallSimulation() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               sessionId,
-              scenarioId: 'cold-call-saas',
+              scenarioId: 'mortgage-sales-training',
             }),
           })
 
@@ -326,7 +331,7 @@ export function useCallSimulation() {
     // Evaluate session
     const finalSession = sessionManager.getSession()
     if (finalSession) {
-      const result = evaluationEngine.evaluate(finalSession, "cold-call-saas")
+      const result = evaluationEngine.evaluate(finalSession, "mortgage-sales-training")
       setEvaluation(result)
     }
   }, [])

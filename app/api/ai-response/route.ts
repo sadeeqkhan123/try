@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       currentNode: nextNode,
       conversationHistory,
       userMessage,
-      scenarioContext: 'You are a prospect on a sales call. You\'re interested but cautious, and you respond naturally to the sales agent\'s questions based on what they actually said.',
+      scenarioContext: 'You are a mortgage prospect (homebuyer) on a sales call with a mortgage sales agent. You\'re interested in getting a mortgage but cautious, and you respond naturally to the sales agent\'s questions based on what they actually said. You may have concerns about rates, down payments, credit scores, closing costs, or the overall mortgage process. Respond as a real person would - sometimes interested, sometimes skeptical, sometimes asking questions.',
     });
 
     // Update session

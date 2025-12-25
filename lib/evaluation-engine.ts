@@ -88,15 +88,15 @@ export class EvaluationEngine {
 
       if (missedSteps.length > 0) {
         if (category === "introduction") {
-          mistakes.push("Skipped or rushed through the value proposition introduction")
+          mistakes.push("Skipped or rushed through the mortgage introduction and value proposition")
         } else if (category === "rapport") {
-          mistakes.push("Failed to build rapport with the prospect")
-        } else if (category === "discovery") {
-          mistakes.push("Incomplete discovery - did not ask enough qualifying questions")
+          mistakes.push("Failed to build rapport with the homebuyer prospect")
+        } else if (category === "exploratory") {
+          mistakes.push("Incomplete discovery - did not ask enough qualifying questions about their homebuying needs")
         } else if (category === "objection_handling") {
-          mistakes.push("Did not address prospect objections properly")
+          mistakes.push("Did not address prospect objections properly (down payment, credit, rates, etc.)")
         } else if (category === "closing") {
-          mistakes.push("Failed to close or advance to next step")
+          mistakes.push("Failed to close or advance to next step in the mortgage application process")
         }
       }
     }
@@ -124,15 +124,15 @@ export class EvaluationEngine {
     for (const [category, score] of sorted) {
       if (score < 80) {
         if (category === "introduction") {
-          recommendations.push("Practice your value proposition - make it more compelling and concise")
+          recommendations.push("Practice your mortgage value proposition - make it more compelling and concise")
         } else if (category === "rapport") {
-          recommendations.push("Work on building rapport - personalize your approach and listen more")
-        } else if (category === "discovery") {
-          recommendations.push("Spend more time in discovery - ask deeper questions about their challenges")
+          recommendations.push("Work on building rapport with homebuyers - personalize your approach and listen more")
+        } else if (category === "exploratory") {
+          recommendations.push("Spend more time in discovery - ask deeper questions about their homebuying goals and financial situation")
         } else if (category === "objection_handling") {
-          recommendations.push("Develop stronger objection handling techniques and confidence")
+          recommendations.push("Develop stronger objection handling for common mortgage concerns (down payment, credit, rates, closing costs)")
         } else if (category === "closing") {
-          recommendations.push("Improve your closing techniques - be more confident asking for commitment")
+          recommendations.push("Improve your closing techniques - be more confident asking for mortgage application commitment")
         }
       }
     }

@@ -113,7 +113,7 @@ export class AIService {
   private buildSystemPrompt(context: ConversationContext): string {
     const node = context.currentNode;
     const scenarioContext = context.scenarioContext || 
-      "You are a prospect on a sales call. You're interested but cautious, and you respond naturally to the sales agent's questions.";
+      "You are a mortgage prospect (homebuyer) on a sales call with a mortgage sales agent. You're interested in getting a mortgage but cautious, and you respond naturally to the sales agent's questions. You may have concerns about rates, down payments, credit scores, or the overall process. Respond as a real person would - sometimes interested, sometimes skeptical, sometimes asking questions.";
 
     let prompt = `${scenarioContext}\n\n`;
     prompt += `Current conversation stage: ${node.label} (${node.category})\n\n`;

@@ -51,7 +51,7 @@ export function CallControls({ simulatorState, onStartCall, onStopCall, scenario
       {/* Header */}
       <div className="border-b border-cyan-500/30 pb-4">
         <h2 className="text-lg font-semibold text-neon-cyan mb-1">AI Prospect Simulation</h2>
-        <p className="text-sm text-slate-400">{scenarioLabel || "Cold call — SaaS demo booking"}</p>
+        <p className="text-sm text-slate-400">{scenarioLabel || "Mortgage Sales Training Call"}</p>
       </div>
 
       {/* Main Control Button */}

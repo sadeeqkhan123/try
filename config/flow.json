@@ -15,6 +15,22 @@
         "objection_handling": ["objection-logistical", "objection-fear"],
         "closing": ["closing-commitment"]
       }
+    },
+    {
+      "id": "mortgage-sales-training",
+      "name": "Mortgage Sales Training Call",
+      "description": "Mortgage sales training flow - User is mortgage sales agent, AI is homebuyer prospect",
+      "startNodeId": "rapport-opening",
+      "requiredCategorySteps": {
+        "rapport": ["rapport-opening", "rapport-desired-outcome"],
+        "exploratory": ["exploratory-current-situation", "exploratory-problem-building"],
+        "alignment": ["alignment-past-actions"],
+        "success": ["success-buying-values", "success-dream-state"],
+        "reality_check": ["reality-check-gap", "reality-check-consequence"],
+        "presentation": ["presentation-pillar-1", "presentation-pillar-2", "presentation-pillar-3"],
+        "objection_handling": ["objection-logistical", "objection-fear"],
+        "closing": ["closing-commitment"]
+      }
     }
   ],
   "nodes": [
@@ -34,7 +50,7 @@
       "transitions": [
         { "intentId": "agent_greets", "nextNodeId": "rapport-prospect-response" }
       ],
-      "clarificationPrompt": "The sales agent should greet the prospect and open the call. Example: 'Hey [NAME]? It looks like you booked on my calendar today about...'"
+      "clarificationPrompt": "The mortgage sales agent should greet the homebuyer prospect and open the call. Example: 'Hi [NAME], this is [AGENT NAME] from [COMPANY]. I understand you're interested in getting a mortgage. Is now a good time to talk?'"
     },
     {
       "id": "rapport-prospect-response",
@@ -42,10 +58,10 @@
       "label": "Prospect Initial Response",
       "category": "rapport",
       "botResponses": [
-        "Hey, yeah I booked a call. What's this about?",
-        "Hi, yes I scheduled this. Can you tell me what you do?",
-        "Yeah, I'm here. I saw something about this online and wanted to learn more.",
-        "Yeah, I booked it. I'm just looking to see what you do, honestly."
+        "Hi, yes. I'm looking to buy a home and need to get pre-approved for a mortgage.",
+        "Yeah, I'm interested in getting a mortgage. Can you help me with that?",
+        "Hi, I'm in the process of buying a house and wanted to see what mortgage options you have.",
+        "Yes, I'm here. I'm looking to get a mortgage loan. What do you need from me?"
       ],
       "expectedIntents": [
         {
@@ -100,11 +116,11 @@
       "label": "Prospect Shares Desired Outcome",
       "category": "rapport",
       "botResponses": [
-        "I want to make more money, I guess.",
-        "I'm looking to increase my revenue.",
-        "I want financial freedom, you know?",
-        "I'd like to make $10k a month so I can take care of my family.",
-        "I'm not really sure what I'm looking for yet."
+        "I want to buy my first home. I've been renting for years and I'm ready to own.",
+        "I'm looking to get a mortgage so I can purchase a house for my family.",
+        "I want to find the best mortgage rate and terms for my situation.",
+        "I'd like to get pre-approved so I can start house hunting with confidence.",
+        "I'm not really sure what I qualify for yet, but I want to explore my options."
       ],
       "expectedIntents": [
         {
@@ -130,11 +146,11 @@
       "label": "Prospect Shares Current Situation",
       "category": "exploratory",
       "botResponses": [
-        "I'm working at a regular job right now, just trying to figure out how to make more.",
-        "I've been trying to do this on my own but I'm not getting the results I want.",
-        "My sales calls don't end well. I only close at like 10% and lose sales to objections.",
-        "I'm using some free stuff I found online, but it's not really working.",
-        "I haven't really invested in anything yet, just trying to learn on my own."
+        "I've been looking at houses online, but I haven't talked to a lender yet.",
+        "I've been trying to figure out the mortgage process on my own, but it's confusing.",
+        "I've talked to a couple of other lenders, but I'm not sure I'm getting the best deal.",
+        "I've been pre-approved before, but that expired and I need to start over.",
+        "I haven't really started the process yet. I'm just beginning to look into mortgages."
       ],
       "expectedIntents": [
         {
@@ -166,11 +182,11 @@
       "label": "Prospect Acknowledges Problem",
       "category": "exploratory",
       "botResponses": [
-        "I don't really have a system in place. I'm just winging it.",
-        "I don't know how to handle objections properly, that's the main issue.",
-        "I haven't invested in proper training, just free stuff.",
-        "I don't have the knowledge I need. I'm missing key skills.",
-        "I guess I don't have anything really set up to solve this."
+        "I don't really understand all the mortgage options available to me.",
+        "I'm not sure what interest rate I qualify for or what my monthly payment would be.",
+        "I haven't found a lender I trust yet. The whole process seems overwhelming.",
+        "I don't know if my credit score is good enough or what I need to improve.",
+        "I guess I'm just not sure where to start or who to trust with this."
       ],
       "expectedIntents": [
         {
@@ -196,11 +212,11 @@
       "label": "Prospect Shares Past Actions",
       "category": "alignment",
       "botResponses": [
-        "I haven't really done anything besides YouTube videos and free stuff.",
-        "I tried a program before but it didn't work out.",
-        "I invested in something similar a while back, spent a few thousand.",
-        "It's never really been a priority until now.",
-        "I thought I could figure it out on my own, but I'm stuck."
+        "I've just been looking at houses online and checking rates on websites.",
+        "I tried working with another lender before, but they weren't very responsive.",
+        "I got pre-approved with a different company last year, but the rate wasn't great.",
+        "It's never really been the right time until now. I'm finally ready to buy.",
+        "I thought I could handle it myself, but I realize I need professional help."
       ],
       "expectedIntents": [
         {
@@ -232,11 +248,11 @@
       "label": "Prospect Identifies Buying Values",
       "category": "success",
       "botResponses": [
-        "I need help with handling objections better. That's my biggest weakness.",
-        "I want someone to look over my shoulder and give me feedback on my calls.",
-        "I need a step-by-step system I can follow.",
-        "I want access to a mentor who's actually done this successfully.",
-        "I'm looking for group calls where I can get my calls reviewed."
+        "I need someone who can explain everything clearly and answer all my questions.",
+        "I want a lender who can get me a competitive rate and help me through the process.",
+        "I need someone who's responsive and will keep me updated throughout.",
+        "I want to work with someone I can trust and who has my best interests in mind.",
+        "I'm looking for a smooth process with good communication and competitive rates."
       ],
       "expectedIntents": [
         {
@@ -262,11 +278,11 @@
       "label": "Prospect Describes Dream State",
       "category": "success",
       "botResponses": [
-        "I'd be making $10k a month and feel confident in my abilities.",
-        "I'd be the guy who can close deals consistently and provide for my family.",
-        "I'd feel successful and in control of my income.",
-        "I'd look in the mirror and feel confident every day.",
-        "I'd have financial freedom and not stress about money."
+        "I'd be in my own home, building equity instead of paying rent.",
+        "I'd have the peace of mind that comes with owning my own place.",
+        "I'd feel proud that I was able to buy a home for my family.",
+        "I'd have stability and a place to call my own.",
+        "I'd be building wealth through homeownership instead of just paying someone else's mortgage."
       ],
       "expectedIntents": [
         {
@@ -384,11 +400,11 @@
       "label": "Prospect Responds to Pillar 3",
       "category": "presentation",
       "botResponses": [
-        "I can see how this could help me.",
-        "This sounds like what I need.",
-        "I'm interested, but I need to think about it.",
-        "This makes sense, but I don't have the money right now.",
-        "I'd need to talk to my partner first."
+        "I can see how this mortgage program could work for me.",
+        "This sounds like a good option. I'm interested.",
+        "I'm interested, but I need to think about it and compare with other lenders.",
+        "This makes sense, but I'm worried about the down payment and closing costs.",
+        "I'd need to talk to my spouse first before making a decision."
       ],
       "expectedIntents": [
         {
@@ -414,12 +430,12 @@
       "label": "Prospect Raises Objection",
       "category": "objection_handling",
       "botResponses": [
-        "I don't have the money right now. It's tight.",
-        "I need to think about it first.",
-        "I have to talk to my partner about this.",
-        "I don't have the time to commit to this right now.",
-        "Aside from the money, this sounds good.",
-        "I'm interested, but I'm not sure if I can do it."
+        "I'm worried about the down payment. I don't have 20% saved up.",
+        "I need to think about it and shop around with other lenders first.",
+        "I have to talk to my spouse about this before we move forward.",
+        "I'm not sure if I have time to gather all the documents right now.",
+        "Aside from the down payment, this sounds like a good option.",
+        "I'm interested, but I'm worried my credit score isn't good enough."
       ],
       "expectedIntents": [
         {
@@ -463,12 +479,12 @@
       "label": "Prospect Expresses Fear/Uncertainty",
       "category": "objection_handling",
       "botResponses": [
-        "I'm just not sure if this will work for me.",
-        "I've been burned before by programs like this.",
-        "I don't know if I can actually do this.",
-        "I'm worried I won't follow through.",
-        "I'm not certain this is the right fit.",
-        "If I knew for sure it would work, I'd do it."
+        "I'm just not sure if I'll qualify or if this is the right mortgage for me.",
+        "I've had bad experiences with lenders before who didn't follow through.",
+        "I don't know if I can actually afford the monthly payment.",
+        "I'm worried the process will be too complicated or take too long.",
+        "I'm not certain you can get me a better rate than what I've seen elsewhere.",
+        "If I knew for sure I'd get approved and the rate would be good, I'd move forward."
       ],
       "expectedIntents": [
         {
@@ -500,11 +516,11 @@
       "label": "Prospect Commits or Declines",
       "category": "closing",
       "botResponses": [
-        "Okay, I'm in. Let's do this.",
-        "Yes, I'm ready to commit. How do we get started?",
-        "I need to do something. Sign me up.",
-        "I'm still not sure. Can I think about it?",
-        "I think I need more time to decide."
+        "Okay, let's do this. I'm ready to move forward with the mortgage application.",
+        "Yes, I'm ready to get started. What do I need to do next?",
+        "I'm ready to apply. Let's get the process started.",
+        "I'm still not 100% sure. Can I think about it and get back to you?",
+        "I think I need more time to decide and compare my options."
       ],
       "expectedIntents": [
         {
@@ -530,9 +546,9 @@
       "label": "Call Completed - Deal Closed",
       "category": "closing",
       "botResponses": [
-        "Perfect! I'm excited to get started. Looking forward to working with you!",
-        "Great! I'm ready to commit. Let's make this happen!",
-        "Awesome! I'm in. Can't wait to get started on this journey."
+        "Perfect! I'm excited to get started on my mortgage application. Looking forward to working with you!",
+        "Great! I'm ready to move forward. Let's get my mortgage approved!",
+        "Awesome! I'm in. Can't wait to get pre-approved and start house hunting!"
       ]
     },
     {

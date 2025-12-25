@@ -70,7 +70,7 @@ export class SpeechToTextService {
               clearTimeout(this.silenceTimeout)
             }
             
-            // Wait 2.5 seconds of silence after final result before processing
+            // Wait 2 seconds of silence after final result before processing
             // This gives the user time to continue speaking if they want
             this.silenceTimeout = setTimeout(() => {
               if (this.isListening && this.lastFinalTranscript.trim()) {
@@ -83,7 +83,7 @@ export class SpeechToTextService {
                 // Reset for next sentence
                 this.lastFinalTranscript = ''
               }
-            }, 2500) // 2.5 seconds of silence after final result - increased buffer
+            }, 2000) // 2 seconds of silence after final result - maximum gap
           }
         }
 
@@ -256,23 +256,35 @@ export class TextToSpeechService {
       return
     }
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel()
+      
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.rate = options.rate || 1
       utterance.pitch = options.pitch || 1
+      utterance.lang = 'en-US'
 
       utterance.onend = () => {
         this.isPlaying = false
         resolve()
       }
 
-      utterance.onerror = () => {
+      utterance.onerror = (error) => {
+        console.error('Speech synthesis error:', error)
         this.isPlaying = false
+        // Don't reject, just resolve so the conversation can continue
         resolve()
       }
 
       this.isPlaying = true
-      window.speechSynthesis.speak(utterance)
+      try {
+        window.speechSynthesis.speak(utterance)
+      } catch (error) {
+        console.error('Error starting speech synthesis:', error)
+        this.isPlaying = false
+        resolve()
+      }
     })
   }
 
