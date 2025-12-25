@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DecisionEngine } from '@/lib/decision-engine';
 import { AIService } from '@/lib/ai-service';
-import { getSession, setSession, getSessionManager, sessionStore } from '@/lib/session-store';
+import { getSession, setSession, getSessionManager, setSessionManager, sessionStore } from '@/lib/session-store';
 import type { ConversationTurn } from '@/lib/types';
 
 // Ensure this route is not statically generated
