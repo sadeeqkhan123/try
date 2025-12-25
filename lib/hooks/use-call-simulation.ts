@@ -123,6 +123,11 @@ export function useCallSimulation() {
 
     try {
       console.log('Calling AI API with transcript:', transcript)
+      
+      // Add timeout to prevent hanging
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+      
       const response = await fetch('/api/ai-response', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,7 +135,10 @@ export function useCallSimulation() {
           sessionId,
           userMessage: transcript,
         }),
+        signal: controller.signal,
       })
+      
+      clearTimeout(timeoutId)
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
@@ -248,6 +256,35 @@ export function useCallSimulation() {
       // Show error to user in UI
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       console.error('Full error details:', errorMessage)
+      
+      // If it's a timeout or abort, provide a fallback response
+      if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('timeout'))) {
+        console.warn('Request timed out, using fallback response')
+        const fallbackResponse = "I'm sorry, could you repeat that? I didn't catch what you said."
+        
+        const botTurn: ConversationTurn = {
+          id: `turn-${Date.now()}-fallback`,
+          timestamp: Date.now(),
+          speaker: "bot",
+          text: fallbackResponse,
+          nodeId: sessionManager.getSimulatorState()?.currentNodeId || 'rapport-opening',
+        }
+        
+        sessionManager.addTurn(botTurn)
+        setTurns((prev) => [...prev, botTurn])
+        
+        // Try to speak the fallback
+        try {
+          await ttsService.speak(fallbackResponse, { rate: 0.95 })
+        } catch (ttsError) {
+          console.error('Error speaking fallback:', ttsError)
+        }
+        
+        sessionManager.setBotSpeaking(false)
+        sessionManager.setListening(true)
+        setSimulatorState(sessionManager.getSimulatorState() || null)
+        return
+      }
       
       sessionManager.setProcessing(false)
       sessionManager.setBotSpeaking(false)
