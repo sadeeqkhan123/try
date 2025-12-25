@@ -4,6 +4,10 @@ import { AIService } from '@/lib/ai-service';
 import { getSession, setSession, getSessionManager } from '@/lib/session-store';
 import type { ConversationTurn } from '@/lib/types';
 
+// Ensure this route is not statically generated
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

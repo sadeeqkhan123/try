@@ -4,6 +4,10 @@ import { DecisionEngine } from '@/lib/decision-engine';
 import { getSession, setSession, getSessionManager, setSessionManager, getAllSessions, deleteSession } from '@/lib/session-store';
 import type { CallSession } from '@/lib/types';
 
+// Ensure this route is not statically generated
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
