@@ -7,16 +7,44 @@ import type { CallSession } from '@/lib/types';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { studentName, batchId, scenarioId = 'cold-call-saas' } = body;
+    const { studentName, batchId, scenarioId = 'mortgage-sales-training' } = body;
+
+    console.log('Creating session with scenarioId:', scenarioId);
 
     const decisionEngine = new DecisionEngine();
     const scenario = decisionEngine.getScenario(scenarioId);
     
     if (!scenario) {
-      return NextResponse.json(
-        { error: `Scenario not found: ${scenarioId}` },
-        { status: 404 }
-      );
+      console.error(`Scenario not found: ${scenarioId}`);
+      // Fallback to default scenario if the requested one doesn't exist
+      const defaultScenario = decisionEngine.getScenario('mortgage-sales-training') || 
+                             decisionEngine.getScenario('cold-call-saas');
+      if (!defaultScenario) {
+        return NextResponse.json(
+          { error: `Scenario not found: ${scenarioId}` },
+          { status: 404 }
+        );
+      }
+      // Use default scenario
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      const sessionManager = new SessionManager();
+      const session = sessionManager.createSession(sessionId, defaultScenario.startNodeId);
+      
+      if (studentName && batchId) {
+        sessionManager.setStudentInfo({ name: studentName, batchId });
+        session.studentInfo = { name: studentName, batchId };
+      }
+
+      setSession(sessionId, session);
+      setSessionManager(sessionId, sessionManager);
+
+      return NextResponse.json({ 
+        sessionId, 
+        session: {
+          ...session,
+          studentInfo: session.studentInfo
+        }
+      }, { status: 201 });
     }
 
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
@@ -32,6 +60,8 @@ export async function POST(request: NextRequest) {
 
     setSession(sessionId, session);
     setSessionManager(sessionId, sessionManager);
+
+    console.log('Session created successfully:', sessionId);
 
     return NextResponse.json({ 
       sessionId, 

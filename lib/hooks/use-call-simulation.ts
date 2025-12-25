@@ -37,6 +37,7 @@ export function useCallSimulation() {
 
   const initializeSession = useCallback(async () => {
     try {
+      console.log('Initializing session...')
       // Create session via API
       const response = await fetch('/api/sessions', {
         method: 'POST',
@@ -47,10 +48,13 @@ export function useCallSimulation() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create session')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('Session creation failed:', response.status, errorData)
+        throw new Error(`Failed to create session: ${response.status} - ${JSON.stringify(errorData)}`)
       }
 
       const data = await response.json()
+      console.log('Session created:', data.sessionId)
       const newSessionId = data.sessionId
       setSessionId(newSessionId)
 
@@ -76,15 +80,47 @@ export function useCallSimulation() {
       }
     } catch (error) {
       console.error('Failed to initialize session:', error)
-      // Fallback to local session
-      const startNodeId = "rapport-opening"
-      const sessionManager = sessionManagerRef.current
-      const newSession = sessionManager.createSession(`session-${Date.now()}`, startNodeId)
-      setSession(newSession)
-      setSimulatorState(sessionManager.getSimulatorState())
-      setTurns([])
-      setEvaluation(null)
-      setStudentInfoSubmitted(false)
+      // Retry once after a short delay
+      setTimeout(async () => {
+        try {
+          console.log('Retrying session creation...')
+          const retryResponse = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              scenarioId: 'mortgage-sales-training',
+            }),
+          })
+          
+          if (retryResponse.ok) {
+            const data = await retryResponse.json()
+            const newSessionId = data.sessionId
+            setSessionId(newSessionId)
+            
+            const sessionManager = sessionManagerRef.current
+            const startNodeId = "rapport-opening"
+            const newSession = sessionManager.createSession(newSessionId, startNodeId)
+            Object.assign(newSession, data.session)
+            
+            setSession(newSession)
+            setSimulatorState(sessionManager.getSimulatorState())
+            setTurns([])
+            setEvaluation(null)
+            setStudentInfoSubmitted(false)
+            
+            const decisionEngine = decisionEngineRef.current
+            const node = decisionEngine.getNode(startNodeId)
+            if (node) {
+              setCurrentNodeLabel(node.label)
+              setCurrentCategory(node.category)
+            }
+          } else {
+            console.error('Retry also failed:', retryResponse.status)
+          }
+        } catch (retryError) {
+          console.error('Retry failed:', retryError)
+        }
+      }, 1000)
     }
   }, [])
 
