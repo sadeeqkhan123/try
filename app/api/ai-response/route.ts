@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     console.log('Looking for session:', sessionId);
     let session = getSession(sessionId);
     if (!session) {
-      console.error('Session not found in store. Available sessions:', Array.from(sessionStore.keys()));
+      console.warn('Session not found in store. Available sessions:', Array.from(sessionStore.keys()));
       // Try to get from session manager store
       const sessionManager = getSessionManager(sessionId);
       if (sessionManager) {
@@ -32,21 +32,33 @@ export async function POST(request: NextRequest) {
           console.log('Found session in manager, syncing to store');
           setSession(sessionId, managerSession);
           session = managerSession;
-        } else {
+        }
+      }
+      
+      // If still not found, create a new session (serverless function instance issue)
+      if (!session) {
+        console.warn('Session not found anywhere. Creating new session due to serverless instance isolation.');
+        const { SessionManager } = await import('@/lib/session-manager');
+        const decisionEngine = new DecisionEngine();
+        const scenario = decisionEngine.getScenario('mortgage-sales-training') || 
+                        decisionEngine.getScenario('cold-call-saas');
+        
+        if (!scenario) {
           return NextResponse.json(
-            { error: 'Session not found' },
-            { status: 404 }
+            { error: 'Could not create session: scenario not found' },
+            { status: 500 }
           );
         }
-      } else {
-        return NextResponse.json(
-          { error: 'Session not found' },
-          { status: 404 }
-        );
+        
+        const newSessionManager = new SessionManager();
+        session = newSessionManager.createSession(sessionId, scenario.startNodeId);
+        setSession(sessionId, session);
+        setSessionManager(sessionId, newSessionManager);
+        console.log('Created new session:', sessionId);
       }
     }
     
-    console.log('Session found:', session.id, 'turns:', session.turns?.length || 0);
+    console.log('Session found/created:', session.id, 'turns:', session.turns?.length || 0);
     
     // Ensure session has required arrays initialized
     if (!session.turns) {
