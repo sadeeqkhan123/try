@@ -70,7 +70,7 @@ export class SpeechToTextService {
               clearTimeout(this.silenceTimeout)
             }
             
-            // Wait 2 seconds of silence after final result before processing
+            // Wait 2.5 seconds of silence after final result before processing
             // This gives the user time to continue speaking if they want
             this.silenceTimeout = setTimeout(() => {
               if (this.isListening && this.lastFinalTranscript.trim()) {
@@ -83,7 +83,7 @@ export class SpeechToTextService {
                 // Reset for next sentence
                 this.lastFinalTranscript = ''
               }
-            }, 2000) // 2 seconds of silence after final result
+            }, 2500) // 2.5 seconds of silence after final result - increased buffer
           }
         }
 

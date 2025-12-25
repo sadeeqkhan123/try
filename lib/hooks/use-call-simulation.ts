@@ -15,6 +15,7 @@ export function useCallSimulation() {
   const [currentCategory, setCurrentCategory] = useState("")
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null)
   const [studentInfoSubmitted, setStudentInfoSubmitted] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null)
 
   // Initialize services
   const decisionEngineRef = useRef(new DecisionEngine())
@@ -34,22 +35,56 @@ export function useCallSimulation() {
     }
   }, [])
 
-  const initializeSession = useCallback(() => {
-    const startNodeId = "rapport-opening"
-    const sessionManager = sessionManagerRef.current
-    const newSession = sessionManager.createSession(`session-${Date.now()}`, startNodeId)
+  const initializeSession = useCallback(async () => {
+    try {
+      // Create session via API
+      const response = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenarioId: 'cold-call-saas',
+        }),
+      })
 
-    setSession(newSession)
-    setSimulatorState(sessionManager.getSimulatorState())
-    setTurns([])
-    setEvaluation(null)
-    setStudentInfoSubmitted(false)
+      if (!response.ok) {
+        throw new Error('Failed to create session')
+      }
 
-    const decisionEngine = decisionEngineRef.current
-    const node = decisionEngine.getNode(startNodeId)
-    if (node) {
-      setCurrentNodeLabel(node.label)
-      setCurrentCategory(node.category)
+      const data = await response.json()
+      const newSessionId = data.sessionId
+      setSessionId(newSessionId)
+
+      // Initialize local state
+      const sessionManager = sessionManagerRef.current
+      const startNodeId = "rapport-opening"
+      const newSession = sessionManager.createSession(newSessionId, startNodeId)
+      
+      // Sync with API session
+      Object.assign(newSession, data.session)
+
+      setSession(newSession)
+      setSimulatorState(sessionManager.getSimulatorState())
+      setTurns([])
+      setEvaluation(null)
+      setStudentInfoSubmitted(false)
+
+      const decisionEngine = decisionEngineRef.current
+      const node = decisionEngine.getNode(startNodeId)
+      if (node) {
+        setCurrentNodeLabel(node.label)
+        setCurrentCategory(node.category)
+      }
+    } catch (error) {
+      console.error('Failed to initialize session:', error)
+      // Fallback to local session
+      const startNodeId = "rapport-opening"
+      const sessionManager = sessionManagerRef.current
+      const newSession = sessionManager.createSession(`session-${Date.now()}`, startNodeId)
+      setSession(newSession)
+      setSimulatorState(sessionManager.getSimulatorState())
+      setTurns([])
+      setEvaluation(null)
+      setStudentInfoSubmitted(false)
     }
   }, [])
 
@@ -57,10 +92,9 @@ export function useCallSimulation() {
 
   const processFinalTranscript = useCallback(async (transcript: string) => {
     const sessionManager = sessionManagerRef.current
-    const decisionEngine = decisionEngineRef.current
     const sttService = sttServiceRef.current
     const ttsService = ttsServiceRef.current
-    const evaluationEngine = evaluationEngineRef.current
+    const decisionEngine = decisionEngineRef.current
 
     if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current)
     sttService.stopListening()
@@ -69,110 +103,149 @@ export function useCallSimulation() {
     sessionManager.setProcessing(true)
     setSimulatorState(sessionManager.getSimulatorState() || null)
 
-    const currentNodeId = sessionManager.getSimulatorState()?.currentNodeId
+    // Add user turn to local state immediately for UI feedback
     const userTurn: ConversationTurn = {
       id: `turn-${Date.now()}`,
       timestamp: Date.now(),
       speaker: "user",
       text: transcript,
-      nodeId: currentNodeId || "",
+      nodeId: sessionManager.getSimulatorState()?.currentNodeId || "",
     }
 
     sessionManager.addTurn(userTurn)
     setTurns((prev) => [...prev, userTurn])
 
-    const detectedIntent = decisionEngine.detectIntent(transcript, currentNodeId || "")
-    const nextNode = decisionEngine.getNextNode(currentNodeId || "", detectedIntent)
+    // Call AI API to get contextual response
+    if (!sessionId) {
+      console.error('No session ID available')
+      return
+    }
 
-    // Processing delay
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    try {
+      const response = await fetch('/api/ai-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          userMessage: transcript,
+        }),
+      })
 
-    if (nextNode) {
-      sessionManager.moveToNode(nextNode.id)
-      setCurrentNodeLabel(nextNode.label)
-      setCurrentCategory(nextNode.category)
+      if (!response.ok) {
+        throw new Error('Failed to get AI response')
+      }
 
-      if (decisionEngine.isTerminalNode(nextNode.id)) {
-        const response = decisionEngine.selectBotResponse(nextNode.id)
-        if (response) {
-          sessionManager.setBotSpeaking(true)
-          sessionManager.setProcessing(false)
-          setSimulatorState(sessionManager.getSimulatorState() || null)
+      const data = await response.json()
+      const aiResponse = data.response
+      const nextNodeId = data.nodeId
+      const isTerminal = data.isTerminal || false
 
-          await ttsService.speak(response.text, { rate: 0.95 })
+      // Update UI state
+      const nextNode = decisionEngine.getNode(nextNodeId)
+      if (nextNode) {
+        sessionManager.moveToNode(nextNodeId)
+        setCurrentNodeLabel(nextNode.label)
+        setCurrentCategory(nextNode.category)
+      }
 
-          const finalTurn: ConversationTurn = {
-            id: `turn-${Date.now()}`,
-            timestamp: Date.now(),
-            speaker: "bot",
-            text: response.text,
-            nodeId: nextNode.id,
-          }
+      // Speak the AI response
+      sessionManager.setBotSpeaking(true)
+      sessionManager.setProcessing(false)
+      setSimulatorState(sessionManager.getSimulatorState() || null)
 
-          sessionManager.addTurn(finalTurn)
-          setTurns((prev) => [...prev, finalTurn])
+      await ttsService.speak(aiResponse, { rate: 0.95 })
 
-          sessionManager.terminateCall(nextNode.id)
-          sessionManager.setBotSpeaking(false)
-          setSimulatorState(sessionManager.getSimulatorState() || null)
+      const botTurn: ConversationTurn = {
+        id: `turn-${Date.now()}`,
+        timestamp: Date.now(),
+        speaker: "bot",
+        text: aiResponse,
+        nodeId: nextNodeId,
+      }
 
-          if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
+      sessionManager.addTurn(botTurn)
+      setTurns((prev) => [...prev, botTurn])
 
-          // Evaluate session
-          const finalSession = sessionManager.getSession()
-          if (finalSession) {
-            const result = evaluationEngine.evaluate(finalSession, "cold-call-saas")
-            setEvaluation(result)
-          }
-        }
-      } else {
-        const response = decisionEngine.selectBotResponse(nextNode.id)
-        if (response) {
-          sessionManager.setBotSpeaking(true)
-          sessionManager.setProcessing(false)
-          setSimulatorState(sessionManager.getSimulatorState() || null)
+      if (isTerminal) {
+        sessionManager.terminateCall(nextNodeId)
+        sessionManager.setBotSpeaking(false)
+        setSimulatorState(sessionManager.getSimulatorState() || null)
 
-          await ttsService.speak(response.text, { rate: 0.95 })
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
 
-          const botTurn: ConversationTurn = {
-            id: `turn-${Date.now()}`,
-            timestamp: Date.now(),
-            speaker: "bot",
-            text: response.text,
-            nodeId: nextNode.id,
-            selectedResponseVariation: response.variationIndex,
-          }
-
-          sessionManager.addTurn(botTurn)
-          setTurns((prev) => [...prev, botTurn])
-
-          sessionManager.setBotSpeaking(false)
-          sessionManager.setListening(true)
-          setSimulatorState(sessionManager.getSimulatorState() || null)
-
-          // Restart listening
-          const sttService = sttServiceRef.current
-          sttService.startListening((result) => {
-            sessionManager.setCurrentTranscript(result.text)
-            setSimulatorState(sessionManager.getSimulatorState() || null)
-
-            if (result.isFinal && processFinalTranscriptRef.current) {
-              processFinalTranscriptRef.current(result.text)
-            }
+        // Evaluate session
+        try {
+          const evalResponse = await fetch('/api/evaluate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId,
+              scenarioId: 'cold-call-saas',
+            }),
           })
 
-          // Auto-stop listening after 8 seconds
-          if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current)
-          listeningTimeoutRef.current = setTimeout(() => {
-            const transcript = sttService.stopListening()
-            if (transcript && processFinalTranscriptRef.current) {
-              processFinalTranscriptRef.current(transcript)
-            }
-          }, 8000)
+          if (evalResponse.ok) {
+            const evalData = await evalResponse.json()
+            setEvaluation(evalData)
+          }
+        } catch (error) {
+          console.error('Failed to evaluate session:', error)
         }
+      } else {
+        // Continue conversation
+        sessionManager.setBotSpeaking(false)
+        sessionManager.setListening(true)
+        setSimulatorState(sessionManager.getSimulatorState() || null)
+
+        // Restart listening with improved buffer
+        sttService.startListening((result) => {
+          sessionManager.setCurrentTranscript(result.text)
+          setSimulatorState(sessionManager.getSimulatorState() || null)
+
+          if (result.isFinal && processFinalTranscriptRef.current) {
+            // Add buffer before processing
+            setTimeout(() => {
+              if (processFinalTranscriptRef.current) {
+                processFinalTranscriptRef.current(result.text)
+              }
+            }, 300) // Small buffer to ensure user is done
+          }
+        })
+
+        // Auto-stop listening after 12 seconds (increased for better UX)
+        if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current)
+        listeningTimeoutRef.current = setTimeout(() => {
+          const finalTranscript = sttService.stopListening()
+          if (finalTranscript && processFinalTranscriptRef.current) {
+            setTimeout(() => {
+              if (processFinalTranscriptRef.current) {
+                processFinalTranscriptRef.current(finalTranscript)
+              }
+            }, 300)
+          }
+        }, 12000)
       }
+    } catch (error) {
+      console.error('Error getting AI response:', error)
+      sessionManager.setProcessing(false)
+      sessionManager.setListening(true)
+      setSimulatorState(sessionManager.getSimulatorState() || null)
+      
+      // Restart listening on error
+      sttService.startListening((result) => {
+        sessionManager.setCurrentTranscript(result.text)
+        setSimulatorState(sessionManager.getSimulatorState() || null)
+
+        if (result.isFinal && processFinalTranscriptRef.current) {
+          setTimeout(() => {
+            if (processFinalTranscriptRef.current) {
+              processFinalTranscriptRef.current(result.text)
+            }
+          }, 300)
+        }
+      })
     }
-  }, [])
+  }, [sessionId])
 
   processFinalTranscriptRef.current = processFinalTranscript
 
@@ -263,11 +336,29 @@ export function useCallSimulation() {
     initializeSession()
   }, [initializeSession])
 
-  const handleStudentInfoSubmit = useCallback((studentInfo: { name: string; batchId: string }) => {
+  const handleStudentInfoSubmit = useCallback(async (studentInfo: { name: string; batchId: string }) => {
     const sessionManager = sessionManagerRef.current
     sessionManager.setStudentInfo(studentInfo)
     setStudentInfoSubmitted(true)
-  }, [])
+
+    // Update session on server
+    if (sessionId) {
+      try {
+        await fetch('/api/sessions', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            updates: {
+              studentInfo,
+            },
+          }),
+        })
+      } catch (error) {
+        console.error('Failed to update session with student info:', error)
+      }
+    }
+  }, [sessionId])
 
   return {
     simulatorState,

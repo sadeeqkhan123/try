@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DecisionEngine } from '@/lib/decision-engine';
+import { AIService } from '@/lib/ai-service';
 import { getSession, setSession, getSessionManager } from '@/lib/session-store';
 import type { ConversationTurn } from '@/lib/types';
 
@@ -32,14 +33,24 @@ export async function POST(request: NextRequest) {
     }
 
     const decisionEngine = new DecisionEngine();
+    const aiService = new AIService();
+    
     // Safely get current node ID with defensive check
     const currentNodeId = (session.nodePathTraversed && session.nodePathTraversed.length > 0)
       ? session.nodePathTraversed[session.nodePathTraversed.length - 1]
-      : 'intro-greeting';
+      : 'rapport-opening';
     
     // Ensure nodePathTraversed is initialized
     if (!session.nodePathTraversed || session.nodePathTraversed.length === 0) {
       session.nodePathTraversed = [currentNodeId];
+    }
+    
+    const currentNode = decisionEngine.getNode(currentNodeId);
+    if (!currentNode) {
+      return NextResponse.json(
+        { error: 'Current node not found' },
+        { status: 400 }
+      );
     }
     
     // Add user message to conversation
@@ -52,8 +63,19 @@ export async function POST(request: NextRequest) {
     };
     session.turns.push(userTurn);
     
-    // Detect intent from user message
-    const detectedIntent = decisionEngine.detectIntent(userMessage, currentNodeId);
+    // Detect intent - try AI first, fallback to keyword matching
+    let detectedIntent: string;
+    if (process.env.OPENAI_API_KEY && currentNode.expectedIntents && currentNode.expectedIntents.length > 0) {
+      // Use AI for better intent detection
+      const conversationHistory = session.turns.map(turn => ({
+        speaker: turn.speaker as 'user' | 'bot',
+        text: turn.text,
+      }));
+      detectedIntent = await aiService.detectIntentWithAI(userMessage, currentNode, conversationHistory);
+    } else {
+      // Fallback to keyword matching
+      detectedIntent = decisionEngine.detectIntent(userMessage, currentNodeId);
+    }
     userTurn.intentId = detectedIntent;
     
     // Get next node based on intent
@@ -61,57 +83,64 @@ export async function POST(request: NextRequest) {
     
     if (!nextNode) {
       // Fallback: stay on current node or use default
-      const currentNode = decisionEngine.getNode(currentNodeId);
       if (currentNode?.defaultNextNodeId) {
         const fallbackNode = decisionEngine.getNode(currentNode.defaultNextNodeId);
         if (fallbackNode) {
+          // Generate AI response for fallback node
+          const conversationHistory = session.turns.map(turn => ({
+            speaker: turn.speaker as 'user' | 'bot',
+            text: turn.text,
+            timestamp: turn.timestamp,
+          }));
+          
+          const aiResponse = await aiService.generateContextualResponse({
+            currentNode: fallbackNode,
+            conversationHistory,
+            userMessage,
+            scenarioContext: 'You are a prospect on a sales call. Respond naturally and contextually.',
+          });
+          
           session.nodePathTraversed.push(fallbackNode.id);
-          const response = decisionEngine.selectBotResponse(fallbackNode.id);
-          if (response) {
-            const botTurn: ConversationTurn = {
-              id: `turn_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-              timestamp: Date.now(),
-              speaker: 'bot',
-              text: response.text,
-              nodeId: fallbackNode.id,
-              selectedResponseVariation: response.variationIndex,
-            };
-            session.turns.push(botTurn);
-            
-            // Handle terminal node if this is one
-            const isTerminalFallback = decisionEngine.isTerminalNode(fallbackNode.id);
-            if (isTerminalFallback) {
-              session.isTerminal = true;
-              session.terminalNodeId = fallbackNode.id;
-              session.endTime = Date.now();
-              session.status = 'completed';
-            }
-            
-            setSession(sessionId, session);
-            
-            // Sync session back to SessionManager to keep state consistent
-            const sessionManager = getSessionManager(sessionId);
-            if (sessionManager) {
-              if (isTerminalFallback) {
-                // For terminal nodes, use terminateCall which properly updates internal state
-                sessionManager.terminateCall(fallbackNode.id);
-                // Then sync to ensure store and manager are in sync (terminateCall already updated manager's session)
-                sessionManager.syncSession(session);
-              } else {
-                // For non-terminal, just sync
-                sessionManager.syncSession(session);
-              }
-            }
-            
-            return NextResponse.json({
-              response: response.text,
-              nodeId: fallbackNode.id,
-              nodeLabel: fallbackNode.label,
-              category: fallbackNode.category,
-              isTerminal: isTerminalFallback,
-              intentDetected: detectedIntent,
-            });
+          
+          const botTurn: ConversationTurn = {
+            id: `turn_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+            timestamp: Date.now(),
+            speaker: 'bot',
+            text: aiResponse,
+            nodeId: fallbackNode.id,
+          };
+          session.turns.push(botTurn);
+          
+          // Handle terminal node if this is one
+          const isTerminalFallback = decisionEngine.isTerminalNode(fallbackNode.id);
+          if (isTerminalFallback) {
+            session.isTerminal = true;
+            session.terminalNodeId = fallbackNode.id;
+            session.endTime = Date.now();
+            session.status = 'completed';
           }
+          
+          setSession(sessionId, session);
+          
+          // Sync session back to SessionManager to keep state consistent
+          const sessionManager = getSessionManager(sessionId);
+          if (sessionManager) {
+            if (isTerminalFallback) {
+              sessionManager.terminateCall(fallbackNode.id);
+              sessionManager.syncSession(session);
+            } else {
+              sessionManager.syncSession(session);
+            }
+          }
+          
+          return NextResponse.json({
+            response: aiResponse,
+            nodeId: fallbackNode.id,
+            nodeLabel: fallbackNode.label,
+            category: fallbackNode.category,
+            isTerminal: isTerminalFallback,
+            intentDetected: detectedIntent,
+          });
         }
       }
       
@@ -121,24 +150,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Select bot response
-    // Find the last bot turn (safely handle cases with < 2 turns)
-    let lastVariationIndex: number | undefined;
-    // Safely find the last bot turn by iterating backwards
-    for (let i = session.turns.length - 1; i >= 0; i--) {
-      if (session.turns[i].speaker === 'bot') {
-        lastVariationIndex = session.turns[i].selectedResponseVariation;
-        break;
-      }
-    }
-    const response = decisionEngine.selectBotResponse(nextNode.id, lastVariationIndex);
-
-    if (!response) {
-      return NextResponse.json(
-        { error: 'Could not generate bot response' },
-        { status: 500 }
-      );
-    }
+    // Generate AI-powered contextual response instead of selecting from script
+    const conversationHistory = session.turns.map(turn => ({
+      speaker: turn.speaker as 'user' | 'bot',
+      text: turn.text,
+      timestamp: turn.timestamp,
+    }));
+    
+    const aiResponse = await aiService.generateContextualResponse({
+      currentNode: nextNode,
+      conversationHistory,
+      userMessage,
+      scenarioContext: 'You are a prospect on a sales call. You\'re interested but cautious, and you respond naturally to the sales agent\'s questions based on what they actually said.',
+    });
 
     // Update session
     if (!session.nodePathTraversed.includes(nextNode.id)) {
@@ -149,9 +173,8 @@ export async function POST(request: NextRequest) {
       id: `turn_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       timestamp: Date.now(),
       speaker: 'bot',
-      text: response.text,
+      text: aiResponse,
       nodeId: nextNode.id,
-      selectedResponseVariation: response.variationIndex,
       intentId: detectedIntent,
     };
 
@@ -184,7 +207,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      response: response.text,
+      response: aiResponse,
       nodeId: nextNode.id,
       nodeLabel: nextNode.label,
       category: nextNode.category,
