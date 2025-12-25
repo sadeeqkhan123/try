@@ -122,6 +122,7 @@ export function useCallSimulation() {
     }
 
     try {
+      console.log('Calling AI API with transcript:', transcript)
       const response = await fetch('/api/ai-response', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,13 +133,21 @@ export function useCallSimulation() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to get AI response')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('AI API error:', response.status, errorData)
+        throw new Error(`Failed to get AI response: ${response.status} - ${JSON.stringify(errorData)}`)
       }
 
       const data = await response.json()
+      console.log('AI Response received:', data)
       const aiResponse = data.response
       const nextNodeId = data.nodeId
       const isTerminal = data.isTerminal || false
+
+      if (!aiResponse) {
+        console.error('No AI response in data:', data)
+        throw new Error('AI response is empty')
+      }
 
       // Update UI state
       const nextNode = decisionEngine.getNode(nextNodeId)
@@ -153,13 +162,6 @@ export function useCallSimulation() {
       sessionManager.setProcessing(false)
       setSimulatorState(sessionManager.getSimulatorState() || null)
 
-      try {
-        await ttsService.speak(aiResponse, { rate: 0.95 })
-      } catch (error) {
-        console.error('Error speaking AI response:', error)
-        // Continue even if TTS fails
-      }
-
       const botTurn: ConversationTurn = {
         id: `turn-${Date.now()}`,
         timestamp: Date.now(),
@@ -171,9 +173,21 @@ export function useCallSimulation() {
       sessionManager.addTurn(botTurn)
       setTurns((prev) => [...prev, botTurn])
 
+      // Speak the AI response
+      console.log('Speaking AI response:', aiResponse)
+      try {
+        await ttsService.speak(aiResponse, { rate: 0.95 })
+        console.log('TTS completed successfully')
+      } catch (error) {
+        console.error('Error speaking AI response:', error)
+        // Continue even if TTS fails, but log it
+      }
+
+      // Reset bot speaking state after TTS completes
+      sessionManager.setBotSpeaking(false)
+
       if (isTerminal) {
         sessionManager.terminateCall(nextNodeId)
-        sessionManager.setBotSpeaking(false)
         setSimulatorState(sessionManager.getSimulatorState() || null)
 
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
@@ -197,8 +211,7 @@ export function useCallSimulation() {
           console.error('Failed to evaluate session:', error)
         }
       } else {
-        // Continue conversation
-        sessionManager.setBotSpeaking(false)
+        // Continue conversation - restart listening
         sessionManager.setListening(true)
         setSimulatorState(sessionManager.getSimulatorState() || null)
 
@@ -232,7 +245,14 @@ export function useCallSimulation() {
       }
     } catch (error) {
       console.error('Error getting AI response:', error)
+      // Show error to user in UI
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      console.error('Full error details:', errorMessage)
+      
       sessionManager.setProcessing(false)
+      sessionManager.setBotSpeaking(false)
+      
+      // Still try to restart listening so user can try again
       sessionManager.setListening(true)
       setSimulatorState(sessionManager.getSimulatorState() || null)
       

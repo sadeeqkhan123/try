@@ -217,9 +217,44 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error generating AI response:', error);
+    
+    // Provide a fallback response so the conversation can continue
+    const fallbackResponse = "I'm sorry, I didn't catch that. Could you repeat?";
+    const currentNode = decisionEngine.getNode(session.nodePathTraversed[session.nodePathTraversed.length - 1] || 'rapport-opening');
+    
+    if (currentNode && currentNode.botResponses && currentNode.botResponses.length > 0) {
+      const randomResponse = currentNode.botResponses[Math.floor(Math.random() * currentNode.botResponses.length)];
+      
+      const botTurn: ConversationTurn = {
+        id: `turn_${Date.now()}_fallback`,
+        timestamp: Date.now(),
+        speaker: 'bot',
+        text: randomResponse,
+        nodeId: currentNode.id,
+      };
+      
+      session.turns.push(botTurn);
+      setSession(sessionId, session);
+      
+      return NextResponse.json({
+        response: randomResponse,
+        nodeId: currentNode.id,
+        nodeLabel: currentNode.label,
+        category: currentNode.category,
+        isTerminal: false,
+        error: 'AI service error, using fallback response',
+      });
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to generate AI response', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      { 
+        error: 'Failed to generate AI response', 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        response: fallbackResponse,
+        nodeId: 'rapport-opening',
+        isTerminal: false,
+      },
+      { status: 200 } // Return 200 with error info so frontend can handle it
     );
   }
 }
