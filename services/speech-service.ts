@@ -92,23 +92,43 @@ export class SpeechToTextService {
           
           // Handle specific errors
           if (event.error === 'not-allowed') {
-            alert('Microphone access denied. Please allow microphone access in your browser settings and refresh the page.')
+            console.error('Microphone access denied. Please allow microphone access in your browser settings.')
+            // Don't use alert - just log and stop
             this.stopListening()
+            // Notify the callback so UI can show a message
+            this.onResultCallback?.({
+              text: '',
+              isFinal: false,
+              confidence: 0,
+            })
             return
           }
           
           if (event.error === 'no-speech') {
-            // User didn't speak, that's okay
+            // User didn't speak, that's okay - don't log as error
             return
           }
           
           if (event.error === 'audio-capture') {
-            alert('No microphone found. Please connect a microphone and try again.')
+            console.error('No microphone found. Please connect a microphone and try again.')
             this.stopListening()
+            // Notify the callback so UI can show a message
+            this.onResultCallback?.({
+              text: '',
+              isFinal: false,
+              confidence: 0,
+            })
             return
           }
           
-          // For other errors, stop listening
+          // For other errors, log but don't stop unless it's critical
+          if (event.error === 'aborted' || event.error === 'network') {
+            // These are usually recoverable, just log
+            console.warn('Speech recognition error (recoverable):', event.error)
+            return
+          }
+          
+          // For unknown errors, stop listening
           this.stopListening()
         }
 
@@ -137,9 +157,25 @@ export class SpeechToTextService {
     if (this.isSupported && this.recognition) {
       try {
         this.recognition.start()
-      } catch (e) {
-        // Already started, ignore
-        console.warn('Recognition already started')
+      } catch (e: any) {
+        // Handle specific errors
+        if (e.name === 'NotAllowedError' || e.message?.includes('not-allowed')) {
+          console.error('Microphone access denied. Please allow microphone access in your browser settings and refresh the page.')
+          this.stopListening()
+          // Notify callback with empty result to indicate error
+          this.onResultCallback?.({
+            text: '',
+            isFinal: false,
+            confidence: 0,
+          })
+          return
+        }
+        // Already started or other recoverable error, just log
+        if (e.message?.includes('already started') || e.message?.includes('started')) {
+          console.warn('Recognition already started')
+        } else {
+          console.warn('Recognition start error:', e.message || e)
+        }
       }
     } else {
       // Fallback to mock if Web Speech API not supported
