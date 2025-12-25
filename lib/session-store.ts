@@ -2,6 +2,8 @@ import type { CallSession } from './types';
 import { SessionManager } from './session-manager';
 
 // Shared in-memory stores (replace with database in production)
+// Note: On serverless platforms like Vercel, this Map is per-instance
+// Sessions may not persist across different function invocations
 export const sessionStore = new Map<string, CallSession>();
 export const sessionManagerStore = new Map<string, SessionManager>();
 

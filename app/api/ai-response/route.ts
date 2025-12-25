@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DecisionEngine } from '@/lib/decision-engine';
 import { AIService } from '@/lib/ai-service';
-import { getSession, setSession, getSessionManager } from '@/lib/session-store';
+import { getSession, setSession, getSessionManager, sessionStore } from '@/lib/session-store';
 import type { ConversationTurn } from '@/lib/types';
 
 // Ensure this route is not statically generated
@@ -20,13 +20,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const session = getSession(sessionId);
+    console.log('Looking for session:', sessionId);
+    let session = getSession(sessionId);
     if (!session) {
-      return NextResponse.json(
-        { error: 'Session not found' },
-        { status: 404 }
-      );
+      console.error('Session not found in store. Available sessions:', Array.from(sessionStore.keys()));
+      // Try to get from session manager store
+      const sessionManager = getSessionManager(sessionId);
+      if (sessionManager) {
+        const managerSession = sessionManager.getSession();
+        if (managerSession) {
+          console.log('Found session in manager, syncing to store');
+          setSession(sessionId, managerSession);
+          session = managerSession;
+        } else {
+          return NextResponse.json(
+            { error: 'Session not found' },
+            { status: 404 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: 'Session not found' },
+          { status: 404 }
+        );
+      }
     }
+    
+    console.log('Session found:', session.id, 'turns:', session.turns?.length || 0);
     
     // Ensure session has required arrays initialized
     if (!session.turns) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SessionManager } from '@/lib/session-manager';
 import { DecisionEngine } from '@/lib/decision-engine';
-import { getSession, setSession, getSessionManager, setSessionManager, getAllSessions, deleteSession } from '@/lib/session-store';
+import { getSession, setSession, getSessionManager, setSessionManager, getAllSessions, deleteSession, sessionStore } from '@/lib/session-store';
 import type { CallSession } from '@/lib/types';
 
 // Ensure this route is not statically generated
@@ -66,6 +66,15 @@ export async function POST(request: NextRequest) {
     setSessionManager(sessionId, sessionManager);
 
     console.log('Session created successfully:', sessionId);
+    console.log('Session stored. Total sessions in store:', sessionStore.size);
+    
+    // Verify it was stored
+    const verifySession = getSession(sessionId);
+    if (!verifySession) {
+      console.error('WARNING: Session was not stored properly!');
+    } else {
+      console.log('Session verified in store:', verifySession.id);
+    }
 
     return NextResponse.json({ 
       sessionId, 
