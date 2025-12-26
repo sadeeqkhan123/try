@@ -412,21 +412,52 @@ export function useCallSimulation() {
   const handleStopCall = useCallback(async () => {
     const sessionManager = sessionManagerRef.current
     const sttService = sttServiceRef.current
+    const ttsService = ttsServiceRef.current
     const evaluationEngine = evaluationEngineRef.current
 
-    if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current)
-    sttService.stopListening()
-    sessionManager.terminateCall(sessionManager.getSimulatorState()?.currentNodeId || "terminal-hangup")
-    setSimulatorState(sessionManager.getSimulatorState() || null)
+    console.log('Stopping call...')
 
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
+    // Stop all timeouts
+    if (listeningTimeoutRef.current) {
+      clearTimeout(listeningTimeoutRef.current)
+      listeningTimeoutRef.current = null
+    }
+    
+    // Stop speech recognition
+    sttService.stopListening()
+    
+    // Stop text-to-speech if it's playing
+    ttsService.stop()
+    
+    // Stop timer
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current)
+      timerIntervalRef.current = null
+    }
+
+    // Terminate the call
+    sessionManager.terminateCall(sessionManager.getSimulatorState()?.currentNodeId || "terminal-hangup")
+    
+    // Set all states to stopped
+    sessionManager.setListening(false)
+    sessionManager.setProcessing(false)
+    sessionManager.setBotSpeaking(false)
+    
+    // Update UI state
+    setSimulatorState(sessionManager.getSimulatorState() || null)
 
     // Evaluate session
     const finalSession = sessionManager.getSession()
     if (finalSession) {
-      const result = evaluationEngine.evaluate(finalSession, "mortgage-sales-training")
-      setEvaluation(result)
+      try {
+        const result = evaluationEngine.evaluate(finalSession, "mortgage-sales-training")
+        setEvaluation(result)
+      } catch (error) {
+        console.error('Error evaluating session:', error)
+      }
     }
+    
+    console.log('Call stopped successfully')
   }, [])
 
   const handleNewSimulation = useCallback(() => {

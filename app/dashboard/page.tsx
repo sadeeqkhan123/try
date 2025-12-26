@@ -71,7 +71,7 @@ export default function Dashboard() {
                 simulatorState={simulatorState}
                 onStartCall={handleStartCall}
                 onStopCall={handleStopCall}
-                scenarioLabel="Cold call — SaaS demo booking"
+                scenarioLabel="Mortgage booking call"
                 subtitlesEnabled={subtitlesEnabled}
                 onSubtitlesToggle={() => setSubtitlesEnabled(!subtitlesEnabled)}
               />
