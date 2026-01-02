@@ -11,9 +11,12 @@ interface CallControlsProps {
   scenarioLabel?: string
   subtitlesEnabled?: boolean
   onSubtitlesToggle?: () => void
+  onStartRecording?: () => void
+  onStopRecording?: () => void
+  isRecording?: boolean
 }
 
-export function CallControls({ simulatorState, onStartCall, onStopCall, scenarioLabel, subtitlesEnabled, onSubtitlesToggle }: CallControlsProps) {
+export function CallControls({ simulatorState, onStartCall, onStopCall, scenarioLabel, subtitlesEnabled, onSubtitlesToggle, onStartRecording, onStopRecording, isRecording }: CallControlsProps) {
   const [timerDisplay, setTimerDisplay] = useState("00:00")
 
   useEffect(() => {
@@ -24,6 +27,42 @@ export function CallControls({ simulatorState, onStartCall, onStopCall, scenario
     const secs = seconds % 60
     setTimerDisplay(`${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`)
   }, [simulatorState]) // Updated to use the entire simulatorState object
+
+  // Spacebar support for push-to-talk
+  useEffect(() => {
+    if (!simulatorState?.callActive || !onStartRecording || !onStopRecording) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle spacebar, and only if not typing in an input/textarea
+      if (e.code === 'Space' || e.key === ' ') {
+        const target = e.target as HTMLElement
+        const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+        if (!isInput && !isRecording) {
+          e.preventDefault()
+          onStartRecording()
+        }
+      }
+    }
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space' || e.key === ' ') {
+        const target = e.target as HTMLElement
+        const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+        if (!isInput && isRecording) {
+          e.preventDefault()
+          onStopRecording()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [simulatorState?.callActive, onStartRecording, onStopRecording, isRecording])
 
   const getStatusBadgeColor = () => {
     if (!simulatorState?.callActive) return "bg-slate-600/20 text-slate-300"
@@ -89,6 +128,32 @@ export function CallControls({ simulatorState, onStartCall, onStopCall, scenario
             <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-cyan-600/0 to-cyan-400/0 group-hover:from-cyan-600/30 group-hover:to-cyan-400/30 blur-lg transition-all duration-300" />
           )}
         </button>
+
+        {/* Push-to-Talk Button - Only shown when call is active */}
+        {simulatorState?.callActive && onStartRecording && onStopRecording && (
+          <button
+            onMouseDown={onStartRecording}
+            onMouseUp={onStopRecording}
+            onTouchStart={onStartRecording}
+            onTouchEnd={onStopRecording}
+            className={`relative h-16 rounded-full font-semibold text-white transition-all duration-300 flex items-center justify-center gap-2 ${
+              isRecording
+                ? "bg-gradient-to-r from-lime-600 to-lime-500 hover:from-lime-500 hover:to-lime-400 glow-green animate-pulse"
+                : "bg-gradient-to-r from-slate-600 to-slate-500 hover:from-slate-500 hover:to-slate-400"
+            }`}
+          >
+            <Mic className={`w-5 h-5 ${isRecording ? "animate-pulse" : ""}`} />
+            {isRecording ? "RECORDING - Release to Send" : "Hold to Talk (Spacebar or Click)"}
+            
+            {/* Pulsing ring when recording */}
+            {isRecording && (
+              <>
+                <div className="absolute inset-0 rounded-full border-2 border-lime-500/50 animate-pulse" />
+                <div className="absolute inset-0 rounded-full border-2 border-lime-500/30 animate-radar-pulse" />
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Session Info */}

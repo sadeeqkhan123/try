@@ -16,6 +16,7 @@ export function useCallSimulation() {
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null)
   const [studentInfoSubmitted, setStudentInfoSubmitted] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [isRecording, setIsRecording] = useState(false)
 
   // Initialize services
   const decisionEngineRef = useRef(new DecisionEngine())
@@ -259,33 +260,8 @@ export function useCallSimulation() {
         sessionManager.setListening(true)
         setSimulatorState(sessionManager.getSimulatorState() || null)
 
-        // Restart listening with improved buffer
-        sttService.startListening((result) => {
-          sessionManager.setCurrentTranscript(result.text)
-          setSimulatorState(sessionManager.getSimulatorState() || null)
-
-          if (result.isFinal && processFinalTranscriptRef.current) {
-            // Add buffer before processing
-            setTimeout(() => {
-              if (processFinalTranscriptRef.current) {
-                processFinalTranscriptRef.current(result.text)
-              }
-            }, 300) // Small buffer to ensure user is done
-          }
-        })
-
-        // Auto-stop listening after 12 seconds (increased for better UX)
-        if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current)
-        listeningTimeoutRef.current = setTimeout(() => {
-          const finalTranscript = sttService.stopListening()
-          if (finalTranscript && processFinalTranscriptRef.current) {
-            setTimeout(() => {
-              if (processFinalTranscriptRef.current) {
-                processFinalTranscriptRef.current(finalTranscript)
-              }
-            }, 300)
-          }
-        }, 12000)
+        // Don't auto-start listening - wait for user to press button
+        // User will manually start recording when ready
       }
     } catch (error) {
       console.error('Error getting AI response:', error)
@@ -325,23 +301,7 @@ export function useCallSimulation() {
       sessionManager.setProcessing(false)
       sessionManager.setBotSpeaking(false)
       
-      // Still try to restart listening so user can try again
-      sessionManager.setListening(true)
-      setSimulatorState(sessionManager.getSimulatorState() || null)
-      
-      // Restart listening on error
-      sttService.startListening((result) => {
-        sessionManager.setCurrentTranscript(result.text)
-        setSimulatorState(sessionManager.getSimulatorState() || null)
-
-        if (result.isFinal && processFinalTranscriptRef.current) {
-          setTimeout(() => {
-            if (processFinalTranscriptRef.current) {
-              processFinalTranscriptRef.current(result.text)
-            }
-          }, 300)
-        }
-      })
+      // Don't auto-restart listening - wait for user to press button
     }
   }, [sessionId])
 
@@ -356,31 +316,52 @@ export function useCallSimulation() {
       sessionManager.setCurrentTranscript(result.text)
       setSimulatorState(sessionManager.getSimulatorState() || null)
 
-      // Only process FINAL results (after user stops speaking)
-      // This ensures we wait for the user to complete their sentence
-      if (result.isFinal && processFinalTranscriptRef.current) {
-        // Add a small delay to ensure the user has truly finished
-        setTimeout(() => {
-          if (processFinalTranscriptRef.current) {
-            processFinalTranscriptRef.current(result.text)
-          }
-        }, 500) // 500ms delay after final result to ensure completion
-      }
+      // Don't auto-process - wait for manual stop via button
+      // This prevents premature processing when user pauses to think
     })
+  }, [])
 
-    // Auto-stop listening after 10 seconds of no speech (increased from 8)
-    if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current)
-    listeningTimeoutRef.current = setTimeout(() => {
-      const transcript = sttService.stopListening()
-      if (transcript && processFinalTranscriptRef.current) {
-        // Wait a moment before processing to ensure user is done
-        setTimeout(() => {
-          if (processFinalTranscriptRef.current) {
-            processFinalTranscriptRef.current(transcript)
-          }
-        }, 500)
-      }
-    }, 10000) // Increased to 10 seconds
+  const handleStartRecording = useCallback(() => {
+    const sessionManager = sessionManagerRef.current
+    const ttsService = ttsServiceRef.current
+    const sttService = sttServiceRef.current
+
+    // If bot is speaking, stop it (interruption handling)
+    if (sessionManager.getSimulatorState()?.isBotSpeaking) {
+      ttsService.stop()
+      sessionManager.setBotSpeaking(false)
+      setSimulatorState(sessionManager.getSimulatorState() || null)
+    }
+
+    setIsRecording(true)
+    sessionManager.setListening(true)
+    setSimulatorState(sessionManager.getSimulatorState() || null)
+
+    // Start listening - but don't auto-process
+    sttService.startListening((result) => {
+      sessionManager.setCurrentTranscript(result.text)
+      setSimulatorState(sessionManager.getSimulatorState() || null)
+      // Don't process final results automatically - wait for button release
+    })
+  }, [])
+
+  const handleStopRecording = useCallback(() => {
+    const sttService = sttServiceRef.current
+    const sessionManager = sessionManagerRef.current
+
+    setIsRecording(false)
+    
+    // Stop listening and get final transcript
+    const finalTranscript = sttService.stopListening()
+    
+    if (finalTranscript && finalTranscript.trim() && processFinalTranscriptRef.current) {
+      // Process the transcript when user releases button
+      processFinalTranscriptRef.current(finalTranscript.trim())
+    } else {
+      // No transcript, just stop listening
+      sessionManager.setListening(false)
+      setSimulatorState(sessionManager.getSimulatorState() || null)
+    }
   }, [])
 
   const handleStartCall = useCallback(async () => {
@@ -392,14 +373,10 @@ export function useCallSimulation() {
       simulatorState.callActive = true
     }
     
-    // Sales agent (user) should speak first, not the AI prospect
-    // So we start listening immediately for the user's opening
-    sessionManager.setListening(true)
+    // Don't auto-start listening - user will press button to start recording
+    sessionManager.setListening(false)
     sessionManager.setBotSpeaking(false)
     setSimulatorState(sessionManager.getSimulatorState() || null)
-
-    // Start listening for user input (sales agent's opening)
-    startListeningSession()
 
     // Start timer
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
@@ -407,7 +384,7 @@ export function useCallSimulation() {
       sessionManager.incrementElapsedTime()
       setSimulatorState({ ...sessionManager.getSimulatorState()! })
     }, 1000)
-  }, [startListeningSession])
+  }, [])
 
   const handleStopCall = useCallback(async () => {
     const sessionManager = sessionManagerRef.current
@@ -415,49 +392,21 @@ export function useCallSimulation() {
     const ttsService = ttsServiceRef.current
     const evaluationEngine = evaluationEngineRef.current
 
-    console.log('Stopping call...')
-
-    // Stop all timeouts
-    if (listeningTimeoutRef.current) {
-      clearTimeout(listeningTimeoutRef.current)
-      listeningTimeoutRef.current = null
-    }
-    
-    // Stop speech recognition
+    if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current)
+    setIsRecording(false)
     sttService.stopListening()
-    
-    // Stop text-to-speech if it's playing
-    ttsService.stop()
-    
-    // Stop timer
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current)
-      timerIntervalRef.current = null
-    }
-
-    // Terminate the call
+    ttsService.stop() // Stop any ongoing speech
     sessionManager.terminateCall(sessionManager.getSimulatorState()?.currentNodeId || "terminal-hangup")
-    
-    // Set all states to stopped
-    sessionManager.setListening(false)
-    sessionManager.setProcessing(false)
-    sessionManager.setBotSpeaking(false)
-    
-    // Update UI state
     setSimulatorState(sessionManager.getSimulatorState() || null)
+
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
 
     // Evaluate session
     const finalSession = sessionManager.getSession()
     if (finalSession) {
-      try {
-        const result = evaluationEngine.evaluate(finalSession, "mortgage-sales-training")
-        setEvaluation(result)
-      } catch (error) {
-        console.error('Error evaluating session:', error)
-      }
+      const result = evaluationEngine.evaluate(finalSession, "mortgage-sales-training")
+      setEvaluation(result)
     }
-    
-    console.log('Call stopped successfully')
   }, [])
 
   const handleNewSimulation = useCallback(() => {
@@ -500,5 +449,8 @@ export function useCallSimulation() {
     handleNewSimulation,
     studentInfoSubmitted,
     handleStudentInfoSubmit,
+    handleStartRecording,
+    handleStopRecording,
+    isRecording,
   }
 }

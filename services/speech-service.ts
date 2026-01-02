@@ -62,29 +62,9 @@ export class SpeechToTextService {
             }
           }
 
-          // When we get a final result, wait for additional silence before processing
-          // This ensures the user has completely finished their sentence
-          if (finalTranscript) {
-            // Clear any existing silence timeout
-            if (this.silenceTimeout) {
-              clearTimeout(this.silenceTimeout)
-            }
-            
-            // Wait 2 seconds of silence after final result before processing
-            // This gives the user time to continue speaking if they want
-            this.silenceTimeout = setTimeout(() => {
-              if (this.isListening && this.lastFinalTranscript.trim()) {
-                this.transcript = this.lastFinalTranscript.trim()
-                this.onResultCallback?.({
-                  text: this.transcript.trim(),
-                  isFinal: true,
-                  confidence: 0.95,
-                })
-                // Reset for next sentence
-                this.lastFinalTranscript = ''
-              }
-            }, 2000) // 2 seconds of silence after final result - maximum gap
-          }
+          // Don't auto-process final results - wait for manual stop
+          // This prevents premature processing when user pauses to think
+          // Final results are only processed when stopListening() is called
         }
 
         this.recognition.onerror = (event: any) => {
@@ -152,6 +132,7 @@ export class SpeechToTextService {
   startListening(onResult: (result: SpeechToTextResult) => void): void {
     this.isListening = true
     this.transcript = ""
+    this.lastFinalTranscript = "" // Reset for new recording session
     this.onResultCallback = onResult
 
     if (this.isSupported && this.recognition) {
@@ -172,7 +153,7 @@ export class SpeechToTextService {
         }
         // Already started or other recoverable error, just log
         if (e.message?.includes('already started') || e.message?.includes('started')) {
-          console.warn('Recognition already started')
+        console.warn('Recognition already started')
         } else {
           console.warn('Recognition start error:', e.message || e)
         }
@@ -315,7 +296,7 @@ export class TextToSpeechService {
 
       this.isPlaying = true
       try {
-        window.speechSynthesis.speak(utterance)
+      window.speechSynthesis.speak(utterance)
       } catch (error) {
         console.error('Error starting speech synthesis:', error)
         this.isPlaying = false

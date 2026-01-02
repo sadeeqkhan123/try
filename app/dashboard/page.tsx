@@ -23,6 +23,9 @@ export default function Dashboard() {
     handleNewSimulation,
     studentInfoSubmitted,
     handleStudentInfoSubmit,
+    handleStartRecording,
+    handleStopRecording,
+    isRecording,
   } = useCallSimulation()
 
   return (
@@ -74,6 +77,9 @@ export default function Dashboard() {
                 scenarioLabel="Mortgage booking call"
                 subtitlesEnabled={subtitlesEnabled}
                 onSubtitlesToggle={() => setSubtitlesEnabled(!subtitlesEnabled)}
+                onStartRecording={handleStartRecording}
+                onStopRecording={handleStopRecording}
+                isRecording={isRecording}
               />
             </div>
           </div>
