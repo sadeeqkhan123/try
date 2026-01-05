@@ -28,18 +28,49 @@ export function CallControls({ simulatorState, onStartCall, onStopCall, scenario
     setTimerDisplay(`${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`)
   }, [simulatorState]) // Updated to use the entire simulatorState object
 
-  // Spacebar support for push-to-talk
+  // Spacebar support for push-to-talk with unlimited hold time support
   useEffect(() => {
     if (!simulatorState?.callActive || !onStartRecording || !onStopRecording) return
+
+    let spacebarPressed = false
+    let recordingStarted = false
+    let keyRepeatTimer: NodeJS.Timeout | null = null
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only handle spacebar, and only if not typing in an input/textarea
       if (e.code === 'Space' || e.key === ' ') {
         const target = e.target as HTMLElement
         const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
-        if (!isInput && !isRecording) {
+        
+        if (!isInput) {
           e.preventDefault()
-          onStartRecording()
+          
+          // If spacebar is already pressed, ignore (handles key repeat)
+          if (spacebarPressed) {
+            return
+          }
+          
+          spacebarPressed = true
+          
+          // Start recording if not already recording
+          if (!isRecording && !recordingStarted) {
+            recordingStarted = true
+            onStartRecording()
+          }
+          
+          // Set up a timer to handle key repeat (browsers may stop firing keydown after key repeat)
+          // This ensures recording continues even if keydown events stop
+          if (keyRepeatTimer) {
+            clearTimeout(keyRepeatTimer)
+          }
+          keyRepeatTimer = setTimeout(() => {
+            // If spacebar is still pressed but we're not recording, restart recording
+            // This handles cases where the browser stops firing keydown events
+            if (spacebarPressed && !isRecording) {
+              recordingStarted = true
+              onStartRecording()
+            }
+          }, 100)
         }
       }
     }
@@ -48,19 +79,73 @@ export function CallControls({ simulatorState, onStartCall, onStopCall, scenario
       if (e.code === 'Space' || e.key === ' ') {
         const target = e.target as HTMLElement
         const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
-        if (!isInput && isRecording) {
+        
+        if (!isInput) {
           e.preventDefault()
-          onStopRecording()
+          
+          // Clear the pressed state
+          spacebarPressed = false
+          recordingStarted = false
+          
+          // Clear any pending timers
+          if (keyRepeatTimer) {
+            clearTimeout(keyRepeatTimer)
+            keyRepeatTimer = null
+          }
+          
+          // Stop recording if we were recording
+          if (isRecording) {
+            onStopRecording()
+          }
         }
+      }
+    }
+
+    // Handle window blur (user switches tabs/windows while holding spacebar)
+    const handleBlur = () => {
+      if (spacebarPressed && isRecording) {
+        // User switched away while holding spacebar - stop recording
+        spacebarPressed = false
+        recordingStarted = false
+        if (keyRepeatTimer) {
+          clearTimeout(keyRepeatTimer)
+          keyRepeatTimer = null
+        }
+        onStopRecording()
+      }
+    }
+
+    // Handle visibility change (user switches tabs)
+    const handleVisibilityChange = () => {
+      if (document.hidden && spacebarPressed && isRecording) {
+        // User switched tabs while holding spacebar - stop recording
+        spacebarPressed = false
+        recordingStarted = false
+        if (keyRepeatTimer) {
+          clearTimeout(keyRepeatTimer)
+          keyRepeatTimer = null
+        }
+        onStopRecording()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('blur', handleBlur)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('blur', handleBlur)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (keyRepeatTimer) {
+        clearTimeout(keyRepeatTimer)
+      }
+      // Cleanup: if recording was active, stop it
+      if (spacebarPressed && isRecording) {
+        onStopRecording()
+      }
     }
   }, [simulatorState?.callActive, onStartRecording, onStopRecording, isRecording])
 

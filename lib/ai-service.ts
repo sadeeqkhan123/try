@@ -90,7 +90,7 @@ export class AIService {
         model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
         messages,
         temperature: 0.8, // Higher temperature for more natural, varied responses
-        max_tokens: 200,
+        max_tokens: 1000, // Increased from 200 to allow longer, more complete responses
         presence_penalty: 0.6, // Encourage variety in responses
       });
 

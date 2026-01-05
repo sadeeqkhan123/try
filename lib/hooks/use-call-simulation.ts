@@ -326,6 +326,12 @@ export function useCallSimulation() {
     const ttsService = ttsServiceRef.current
     const sttService = sttServiceRef.current
 
+    // Prevent double-starting if already recording
+    if (isRecording) {
+      console.log('Already recording, ignoring start request')
+      return
+    }
+
     // If bot is speaking, stop it (interruption handling)
     if (sessionManager.getSimulatorState()?.isBotSpeaking) {
       ttsService.stop()
@@ -343,26 +349,43 @@ export function useCallSimulation() {
       setSimulatorState(sessionManager.getSimulatorState() || null)
       // Don't process final results automatically - wait for button release
     })
-  }, [])
+  }, [isRecording])
 
   const handleStopRecording = useCallback(() => {
     const sttService = sttServiceRef.current
     const sessionManager = sessionManagerRef.current
 
+    // Prevent double-stopping if not recording
+    if (!isRecording) {
+      console.log('Not recording, ignoring stop request')
+      // Still ensure state is clean
+      sessionManager.setListening(false)
+      setSimulatorState(sessionManager.getSimulatorState() || null)
+      return
+    }
+
+    // Always reset recording state first to prevent stuck state
     setIsRecording(false)
     
     // Stop listening and get final transcript
     const finalTranscript = sttService.stopListening()
     
+    // Always update listening state
+    sessionManager.setListening(false)
+    setSimulatorState(sessionManager.getSimulatorState() || null)
+    
+    // Process transcript if we have one
     if (finalTranscript && finalTranscript.trim() && processFinalTranscriptRef.current) {
       // Process the transcript when user releases button
-      processFinalTranscriptRef.current(finalTranscript.trim())
+      // Use setTimeout to ensure state updates are complete
+      setTimeout(() => {
+        processFinalTranscriptRef.current?.(finalTranscript.trim())
+      }, 0)
     } else {
-      // No transcript, just stop listening
-      sessionManager.setListening(false)
-      setSimulatorState(sessionManager.getSimulatorState() || null)
+      // No transcript - this is fine, user might have held spacebar without speaking
+      console.log('No transcript to process')
     }
-  }, [])
+  }, [isRecording])
 
   const handleStartCall = useCallback(async () => {
     const sessionManager = sessionManagerRef.current
@@ -392,10 +415,13 @@ export function useCallSimulation() {
     const ttsService = ttsServiceRef.current
     const evaluationEngine = evaluationEngineRef.current
 
+    // Always ensure recording is stopped and state is clean
     if (listeningTimeoutRef.current) clearTimeout(listeningTimeoutRef.current)
     setIsRecording(false)
     sttService.stopListening()
     ttsService.stop() // Stop any ongoing speech
+    sessionManager.setListening(false)
+    sessionManager.setBotSpeaking(false)
     sessionManager.terminateCall(sessionManager.getSimulatorState()?.currentNodeId || "terminal-hangup")
     setSimulatorState(sessionManager.getSimulatorState() || null)
 
