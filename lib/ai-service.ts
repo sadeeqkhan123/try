@@ -89,16 +89,19 @@ export class AIService {
       const completion = await openaiClient.chat.completions.create({
         model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
         messages,
-        temperature: 0.8, // Higher temperature for more natural, varied responses
+        temperature: 0.7, // Slightly lower for more consistent passive behavior
         max_tokens: 1000, // Increased from 200 to allow longer, more complete responses
-        presence_penalty: 0.6, // Encourage variety in responses
+        presence_penalty: 0.3, // Lower penalty to reduce question-asking behavior
       });
 
-      const response = completion.choices[0]?.message?.content?.trim();
+      let response = completion.choices[0]?.message?.content?.trim();
       
       if (!response) {
         return this.getFallbackResponse(context.currentNode);
       }
+
+      // Replace placeholders with randomized personal information for JOHN
+      response = this.injectRandomizedPersonalInfo(response);
 
       return response;
     } catch (error) {
@@ -113,9 +116,9 @@ export class AIService {
   private buildSystemPrompt(context: ConversationContext): string {
     const node = context.currentNode;
     const scenarioContext = context.scenarioContext || 
-      "You are a mortgage prospect (homebuyer) on a sales call with a mortgage sales agent. You're interested in getting a mortgage but cautious, and you respond naturally to the sales agent's questions. You may have concerns about rates, down payments, credit scores, or the overall process. Respond as a real person would - sometimes interested, sometimes skeptical, sometimes asking questions.";
+      "You are JOHN. You already own a home that you bought 1-25 years ago. You have a mortgage. This call is about MORTGAGE PROTECTION OPTIONS (insurance), NOT mortgage loans. You are PASSIVE - you do NOT ask questions 90% of the time. You ONLY answer what the agent asks. When asked for height/weight/age/medical info, provide it IMMEDIATELY. You only ask questions in rare situations (10%): 'how much is this gonna cost?' (beginning only), 'why do i have to give out my information?' (when asked health questions), 'why do i have to give my routing and account?' (when told about banking), 'im gonna need to think about this' (after options), 'i need to talk to my partner' (after options), or 'I think this costs too much. Thank you.' (after options). Otherwise, be completely passive.";
 
-    let prompt = `${scenarioContext}\n\n`;
+    let prompt = `IMPORTANT: This is about MORTGAGE PROTECTION OPTIONS (insurance), NOT mortgage loans. You already have a mortgage. You are NOT looking to get a mortgage or buy a home.\n\n${scenarioContext}\n\n`;
     prompt += `Current conversation stage: ${node.label} (${node.category})\n\n`;
     
     if (node.clarificationPrompt) {
@@ -131,24 +134,34 @@ export class AIService {
       }
 
       // Include example responses as style guidance (but don't copy them exactly)
+      // NOTE: These examples may reference mortgage loans, but you are about MORTGAGE PROTECTION OPTIONS
       if (node.botResponses && node.botResponses.length > 0) {
-        prompt += `Your response should be similar in tone and intent to these examples, but feel free to be more natural and contextual:\n`;
+        prompt += `Your response should be similar in tone to these examples, but remember: you are about MORTGAGE PROTECTION OPTIONS (insurance), NOT mortgage loans. Adapt the tone but change the context:\n`;
         node.botResponses.slice(0, 2).forEach((example, i) => {
           prompt += `- Example ${i + 1}: "${example}"\n`;
         });
         prompt += `\n`;
       }
 
-      prompt += `Respond naturally based on what the sales agent just said. `;
-      prompt += `If they asked a question, answer it. If they made a statement, respond appropriately. `;
-      prompt += `If you're confused or need clarification, ask for it. `;
-      prompt += `Keep your response conversational, brief (1-2 sentences), and realistic. `;
-      prompt += `Don't just follow a script - actually respond to what they said.\n\n`;
+      prompt += `CRITICAL BEHAVIOR: You are a PASSIVE client. You do NOT ask questions 90% of the time. You ONLY answer what the agent asks. `;
+      prompt += `If the agent asks for your height, weight, age, or medical information, PROVIDE IT IMMEDIATELY without any hesitation, resistance, or questions. Just answer directly. `;
+      prompt += `If they ask you to verify information, do so immediately. If they say you got disconnected, acknowledge it and continue from where you left off. `;
+      prompt += `If they asked a question, answer it directly and briefly (1-2 sentences). If they made a statement, give a brief acknowledgment or response. `;
+      prompt += `Do NOT ask questions unless it's one of the 6 rare situations listed. Do NOT refuse to answer. Do NOT insist on answering other questions first. `;
+      prompt += `Be completely passive and cooperative. Follow their lead completely.\n\n`;
     }
 
-    prompt += `Important: Your response should directly address what the sales agent just said. `;
-    prompt += `If they asked about something specific, answer that. If they asked for clarification, provide it. `;
-    prompt += `Be natural and human-like, not robotic.`;
+    prompt += `CRITICAL INSTRUCTIONS - READ CAREFULLY: `;
+    prompt += `1. Your name is JOHN. `;
+    prompt += `2. You already own a home that you bought 1-25 years ago. You have a mortgage on this home. `;
+    prompt += `3. THIS CALL IS ABOUT MORTGAGE PROTECTION OPTIONS (insurance to protect your mortgage if you die or become disabled), NOT about getting a mortgage loan. Do NOT mention getting a mortgage, buying a home, pre-approval, or house hunting. `;
+    prompt += `4. YOU ARE PASSIVE - You do NOT ask questions 90% of the time. You ONLY answer what the agent asks. Most clients don't ask questions - they just answer. `;
+    prompt += `5. WHEN THE AGENT ASKS FOR HEIGHT/WEIGHT/AGE/MEDICAL INFO, PROVIDE IT IMMEDIATELY without any hesitation, resistance, or questions. Just answer directly. This is essential for the agent to practice. `;
+    prompt += `6. You ONLY ask questions in these RARE situations (10% of the time): "how much is this gonna cost?" (only at the very beginning if not told), "why do i have to give out my information?" (only when asked health questions), "why do i have to give my routing and account?" (only when told about banking), "im gonna need to think about this" (only after all options explained), "i need to talk to my partner" (only after options), or "I think this costs too much. Thank you." (only after options). `;
+    prompt += `7. Do NOT ask other questions. Do NOT refuse to answer. Do NOT insist on answering other questions first. Do NOT create "walls" or barriers. `;
+    prompt += `8. If asked to verify information or continue after disconnection, do so immediately. `;
+    prompt += `9. Remember: You already have a mortgage. You are NOT looking to get a mortgage. You are learning about protection insurance for your existing mortgage. `;
+    prompt += `Be completely passive, cooperative, and follow the agent's lead. Answer questions directly without resistance. Do NOT ask questions unless it's one of the 6 rare situations.`;
 
     return prompt;
   }
@@ -184,12 +197,46 @@ export class AIService {
   }
 
   /**
+   * Inject randomized personal information for JOHN
+   */
+  private injectRandomizedPersonalInfo(text: string): string {
+    // Generate random values for JOHN (consistent within session)
+    // Height: 5'6" to 6'4"
+    const feet = Math.floor(Math.random() * 2) + 5; // 5 or 6
+    const inches = Math.floor(Math.random() * 12); // 0-11
+    const height = `${feet}'${inches}"`;
+    
+    // Weight: 150-250 lbs
+    const weight = Math.floor(Math.random() * 100) + 150;
+    
+    // Age: 35-65 years
+    const age = Math.floor(Math.random() * 30) + 35;
+    
+    // Replace common patterns
+    let result = text;
+    result = result.replace(/\byour height\b/gi, height);
+    result = result.replace(/\byour weight\b/gi, `${weight} pounds`);
+    result = result.replace(/\byour age\b/gi, age.toString());
+    result = result.replace(/\bheight\b/gi, height);
+    result = result.replace(/\bweight\b/gi, `${weight} pounds`);
+    result = result.replace(/\bage\b/gi, age.toString());
+    
+    // Replace "I'm" patterns with specific values
+    result = result.replace(/\bI'm\s+(\d+)\s*(feet|ft|')\s*(\d+)\s*(inches|in|")\b/gi, `I'm ${height}`);
+    result = result.replace(/\bI'm\s+(\d+)\s*(pounds|lbs?)\b/gi, `I'm ${weight} pounds`);
+    result = result.replace(/\bI'm\s+(\d+)\s*(years?\s*old)?\b/gi, `I'm ${age} years old`);
+    
+    return result;
+  }
+
+  /**
    * Fallback to scripted response if AI fails
    */
   private getFallbackResponse(node: DecisionNode): string {
     if (node.botResponses && node.botResponses.length > 0) {
       const randomIndex = Math.floor(Math.random() * node.botResponses.length);
-      return node.botResponses[randomIndex];
+      const response = node.botResponses[randomIndex];
+      return this.injectRandomizedPersonalInfo(response);
     }
     return "I'm not sure how to respond to that.";
   }

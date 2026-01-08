@@ -68,7 +68,7 @@ export function CallControls({ simulatorState, onStartCall, onStopCall, scenario
             // This handles cases where the browser stops firing keydown events
             if (spacebarPressed && !isRecording) {
               recordingStarted = true
-              onStartRecording()
+          onStartRecording()
             }
           }, 100)
         }
@@ -95,8 +95,8 @@ export function CallControls({ simulatorState, onStartCall, onStopCall, scenario
           
           // Stop recording if we were recording
           if (isRecording) {
-            onStopRecording()
-          }
+          onStopRecording()
+        }
         }
       }
     }

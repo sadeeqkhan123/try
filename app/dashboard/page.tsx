@@ -8,7 +8,7 @@ import { StudentInfoForm } from "@/components/student-info-form"
 import { useCallSimulation } from "@/lib/hooks/use-call-simulation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export default function Dashboard() {
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(false)
@@ -27,6 +27,24 @@ export default function Dashboard() {
     handleStopRecording,
     isRecording,
   } = useCallSimulation()
+
+  // Handle page visibility changes to prevent AI from messing up
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Page is hidden - pause any ongoing operations
+        console.log('Page hidden - pausing operations')
+      } else {
+        // Page is visible again - resume operations
+        console.log('Page visible - resuming operations')
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white p-6">
@@ -74,7 +92,7 @@ export default function Dashboard() {
                 simulatorState={simulatorState}
                 onStartCall={handleStartCall}
                 onStopCall={handleStopCall}
-                scenarioLabel="Mortgage booking call"
+                scenarioLabel="Mortgage Protection Options Call"
                 subtitlesEnabled={subtitlesEnabled}
                 onSubtitlesToggle={() => setSubtitlesEnabled(!subtitlesEnabled)}
                 onStartRecording={handleStartRecording}

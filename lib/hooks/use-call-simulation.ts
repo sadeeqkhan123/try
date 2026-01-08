@@ -221,7 +221,7 @@ export function useCallSimulation() {
       // Speak the AI response
       console.log('Speaking AI response:', aiResponse)
       try {
-        await ttsService.speak(aiResponse, { rate: 0.95 })
+        await ttsService.speak(aiResponse, { rate: 1.25 })
         console.log('TTS completed successfully')
       } catch (error) {
         console.error('Error speaking AI response:', error)
@@ -333,10 +333,17 @@ export function useCallSimulation() {
     }
 
     // If bot is speaking, stop it (interruption handling)
+    // This is normal behavior - don't treat it as an error
     if (sessionManager.getSimulatorState()?.isBotSpeaking) {
-      ttsService.stop()
-      sessionManager.setBotSpeaking(false)
-      setSimulatorState(sessionManager.getSimulatorState() || null)
+      try {
+        ttsService.stop()
+        sessionManager.setBotSpeaking(false)
+        setSimulatorState(sessionManager.getSimulatorState() || null)
+        console.log('Bot speech interrupted by user - this is normal')
+      } catch (error) {
+        // Silently handle interruption - this is expected behavior
+        console.log('Bot speech already stopped')
+      }
     }
 
     setIsRecording(true)
