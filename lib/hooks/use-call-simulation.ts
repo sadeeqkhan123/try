@@ -158,43 +158,74 @@ export function useCallSimulation() {
       return
     }
 
-    try {
-      console.log('Calling AI API with transcript:', transcript)
-      
-      // Add timeout to prevent hanging
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
-      
-      const response = await fetch('/api/ai-response', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          userMessage: transcript,
-        }),
-        signal: controller.signal,
-      })
-      
-      clearTimeout(timeoutId)
+    // Retry logic for AI responses
+    let retryCount = 0
+    const maxRetries = 3
+    let aiResponse: string | null = null
+    let nextNodeId: string | null = null
+    let isTerminal = false
+    let lastError: Error | null = null
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        console.error('AI API error:', response.status, errorData)
-        throw new Error(`Failed to get AI response: ${response.status} - ${JSON.stringify(errorData)}`)
+    while (retryCount < maxRetries && !aiResponse) {
+      try {
+        console.log(`Calling AI API with transcript (attempt ${retryCount + 1}/${maxRetries}):`, transcript)
+        
+        // Add timeout to prevent hanging - increase timeout for retries
+        const timeoutDuration = retryCount > 0 ? 45000 : 30000 // 45s for retries, 30s for first attempt
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), timeoutDuration)
+        
+        const response = await fetch('/api/ai-response', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            userMessage: transcript,
+          }),
+          signal: controller.signal,
+        })
+        
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+          console.error(`AI API error (attempt ${retryCount + 1}):`, response.status, errorData)
+          throw new Error(`Failed to get AI response: ${response.status} - ${JSON.stringify(errorData)}`)
+        }
+
+        const data = await response.json()
+        console.log('AI Response received:', data)
+        aiResponse = data.response
+        nextNodeId = data.nodeId
+        isTerminal = data.isTerminal || false
+
+        if (!aiResponse) {
+          console.error('No AI response in data:', data)
+          throw new Error('AI response is empty')
+        }
+        
+        // Success - break out of retry loop
+        break
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error))
+        retryCount++
+        
+        if (retryCount < maxRetries) {
+          console.warn(`AI request failed, retrying in ${retryCount * 1000}ms...`, lastError.message)
+          // Exponential backoff: wait 1s, 2s, 3s between retries
+          await new Promise(resolve => setTimeout(resolve, retryCount * 1000))
+        } else {
+          console.error('AI request failed after all retries:', lastError.message)
+        }
       }
+    }
 
-      const data = await response.json()
-      console.log('AI Response received:', data)
-      const aiResponse = data.response
-      const nextNodeId = data.nodeId
-      const isTerminal = data.isTerminal || false
+    // If we still don't have a response after retries, throw error
+    if (!aiResponse || !nextNodeId) {
+      throw lastError || new Error('Failed to get AI response after retries')
+    }
 
-      if (!aiResponse) {
-        console.error('No AI response in data:', data)
-        throw new Error('AI response is empty')
-      }
-
-      // Update UI state
+    // Update UI state
       const nextNode = decisionEngine.getNode(nextNodeId)
       if (nextNode) {
         sessionManager.moveToNode(nextNodeId)

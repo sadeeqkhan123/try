@@ -9,9 +9,18 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  // Initialize decision engine outside try block so it's available in catch
+  const decisionEngine = new DecisionEngine();
+  const aiService = new AIService();
+  
+  // Parse body once and store for use in catch block
+  let sessionId: string | undefined;
+  let userMessage: string | undefined;
+  
   try {
     const body = await request.json();
-    const { sessionId, userMessage } = body;
+    sessionId = body.sessionId;
+    userMessage = body.userMessage;
 
     if (!sessionId || !userMessage) {
       return NextResponse.json(
@@ -67,9 +76,6 @@ export async function POST(request: NextRequest) {
     if (!session.nodePathTraversed) {
       session.nodePathTraversed = [];
     }
-
-    const decisionEngine = new DecisionEngine();
-    const aiService = new AIService();
     
     // Safely get current node ID with defensive check
     const currentNodeId = (session.nodePathTraversed && session.nodePathTraversed.length > 0)
@@ -83,6 +89,7 @@ export async function POST(request: NextRequest) {
     
     const currentNode = decisionEngine.getNode(currentNodeId);
     if (!currentNode) {
+      console.error('Current node not found:', currentNodeId);
       return NextResponse.json(
         { error: 'Current node not found' },
         { status: 400 }
@@ -254,9 +261,19 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error generating AI response:', error);
     
+    // Try to get session for fallback using stored sessionId
+    let session = sessionId ? getSession(sessionId) : null;
+    
     // Provide a fallback response so the conversation can continue
     const fallbackResponse = "I'm sorry, I didn't catch that. Could you repeat?";
-    const currentNode = decisionEngine.getNode(session.nodePathTraversed[session.nodePathTraversed.length - 1] || 'rapport-opening');
+    
+    // Safely get current node for fallback
+    let currentNode = null;
+    if (session && session.nodePathTraversed && session.nodePathTraversed.length > 0) {
+      currentNode = decisionEngine.getNode(session.nodePathTraversed[session.nodePathTraversed.length - 1] || 'rapport-opening');
+    } else {
+      currentNode = decisionEngine.getNode('rapport-opening');
+    }
     
     if (currentNode && currentNode.botResponses && currentNode.botResponses.length > 0) {
       const randomResponse = currentNode.botResponses[Math.floor(Math.random() * currentNode.botResponses.length)];
@@ -269,8 +286,10 @@ export async function POST(request: NextRequest) {
         nodeId: currentNode.id,
       };
       
-      session.turns.push(botTurn);
-      setSession(sessionId, session);
+      if (session) {
+        session.turns.push(botTurn);
+        setSession(sessionId, session);
+      }
       
       return NextResponse.json({
         response: randomResponse,
@@ -287,7 +306,7 @@ export async function POST(request: NextRequest) {
         error: 'Failed to generate AI response', 
         details: error instanceof Error ? error.message : 'Unknown error',
         response: fallbackResponse,
-        nodeId: 'rapport-opening',
+        nodeId: currentNode?.id || 'rapport-opening',
         isTerminal: false,
       },
       { status: 200 } // Return 200 with error info so frontend can handle it

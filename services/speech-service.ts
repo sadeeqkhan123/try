@@ -42,16 +42,34 @@ export class SpeechToTextService {
             const confidence = event.results[i][0].confidence || 0.8
 
             if (event.results[i].isFinal) {
-              finalTranscript += transcript + ' '
-              this.lastFinalTranscript += finalTranscript
+              // Add space before final transcript if lastFinalTranscript doesn't end with space
+              const separator = this.lastFinalTranscript && !this.lastFinalTranscript.endsWith(' ') ? ' ' : ''
+              finalTranscript += separator + transcript
             } else {
               interimTranscript += transcript
             }
           }
 
           // Update transcript for display (shows what user is saying in real-time)
+          // Combine lastFinalTranscript with any new final results and interim results
           if (interimTranscript || finalTranscript) {
-            this.transcript = this.lastFinalTranscript + (interimTranscript ? ' ' + interimTranscript : '')
+            // If we have final results, add them to lastFinalTranscript
+            if (finalTranscript) {
+              this.lastFinalTranscript += finalTranscript + ' '
+            }
+            
+            // Build complete transcript: existing final + new final + interim
+            const existingFinal = this.lastFinalTranscript.trim()
+            const interim = interimTranscript.trim()
+            
+            // Combine properly with spaces
+            let combined = existingFinal
+            if (interim) {
+              combined = combined ? `${combined} ${interim}` : interim
+            }
+            
+            this.transcript = combined
+            
             // Only show interim results for display, don't process them
             if (interimTranscript && !finalTranscript) {
               this.onResultCallback?.({
@@ -185,9 +203,28 @@ export class SpeechToTextService {
       }
     }
 
-    // Return the final transcript
-    const finalTranscript = this.transcript.trim() || this.lastFinalTranscript.trim()
+    // Wait a brief moment to ensure any final results are captured
+    // Then combine both transcript sources to ensure we don't lose the last word
+    const combinedTranscript = this.transcript.trim() || this.lastFinalTranscript.trim()
+    
+    // If we have both, combine them (transcript might have interim, lastFinalTranscript has final)
+    let finalTranscript = combinedTranscript
+    if (this.transcript.trim() && this.lastFinalTranscript.trim()) {
+      // If transcript already includes lastFinalTranscript, use transcript
+      // Otherwise combine them
+      const transcriptText = this.transcript.trim()
+      const lastFinalText = this.lastFinalTranscript.trim()
+      if (!transcriptText.includes(lastFinalText)) {
+        finalTranscript = `${lastFinalText} ${transcriptText}`.trim()
+      } else {
+        finalTranscript = transcriptText
+      }
+    }
+    
+    // Reset for next session
     this.lastFinalTranscript = ''
+    this.transcript = ''
+    
     return finalTranscript
   }
 
