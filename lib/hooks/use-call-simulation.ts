@@ -225,7 +225,8 @@ export function useCallSimulation() {
       throw lastError || new Error('Failed to get AI response after retries')
     }
 
-    // Update UI state
+    try {
+      // Update UI state
       const nextNode = decisionEngine.getNode(nextNodeId)
       if (nextNode) {
         sessionManager.moveToNode(nextNodeId)
