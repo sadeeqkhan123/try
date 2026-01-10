@@ -5,6 +5,7 @@ import { ConversationPanel } from "@/components/conversation-panel"
 import { LiveHud } from "@/components/live-hud"
 import { ReportCard } from "@/components/report-card"
 import { StudentInfoForm } from "@/components/student-info-form"
+import { ErrorBoundary } from "@/components/error-boundary"
 import { useCallSimulation } from "@/lib/hooks/use-call-simulation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
@@ -28,26 +29,62 @@ export default function Dashboard() {
     isRecording,
   } = useCallSimulation()
 
-  // Handle page visibility changes to prevent AI from messing up
+  // Handle page visibility changes to prevent crashes when switching windows
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Page is hidden - pause any ongoing operations
-        console.log('Page hidden - pausing operations')
-      } else {
-        // Page is visible again - resume operations
-        console.log('Page visible - resuming operations')
+      try {
+        if (document.hidden) {
+          // Page is hidden - gracefully pause operations without crashing
+          console.log('Page hidden - pausing operations gracefully')
+          
+          // Stop any ongoing recording to prevent errors
+          if (isRecording) {
+            console.log('Stopping recording due to page visibility change')
+            try {
+              handleStopRecording()
+            } catch (error) {
+              console.warn('Error stopping recording on visibility change:', error)
+            }
+          }
+        } else {
+          // Page is visible again - resume operations safely
+          console.log('Page visible - resuming operations')
+          // Don't auto-resume recording - let user manually start
+        }
+      } catch (error) {
+        // Silently handle any errors during visibility change
+        console.warn('Error handling visibility change:', error)
       }
     }
 
+    // Global error handler to catch unhandled errors
+    const handleError = (event: ErrorEvent) => {
+      console.error('Global error caught:', event.error)
+      // Prevent default error handling that might crash the app
+      event.preventDefault()
+    }
+
+    // Handle unhandled promise rejections
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled promise rejection:', event.reason)
+      // Prevent default error handling
+      event.preventDefault()
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('error', handleError)
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
+    
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('error', handleError)
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
     }
-  }, [])
+  }, [isRecording, handleStopRecording])
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white p-6">
+    <ErrorBoundary>
+      <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white p-6">
       {/* Header Navigation */}
       <div className="max-w-7xl mx-auto mb-6">
         <Link
@@ -126,6 +163,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-    </main>
+      </main>
+    </ErrorBoundary>
   )
 }

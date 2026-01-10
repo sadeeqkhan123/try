@@ -126,17 +126,38 @@ export class SpeechToTextService {
             return
           }
           
-          // For unknown errors, stop listening
-          this.stopListening()
+          // Handle page visibility errors gracefully
+          if (event.error === 'service-not-allowed' || event.error === 'bad-grammar') {
+            // These can happen when page becomes hidden, just log
+            console.warn('Speech recognition error (page visibility related):', event.error)
+            return
+          }
+          
+          // For unknown errors, stop listening gracefully
+          try {
+            this.stopListening()
+          } catch (stopError) {
+            // Silently handle stop errors
+            console.warn('Error stopping recognition:', stopError)
+          }
         }
 
         this.recognition.onend = () => {
           if (this.isListening) {
-            // Restart if we're still supposed to be listening
-            try {
-              this.recognition.start()
-            } catch (e) {
-              // Already started, ignore
+            // Only restart if page is visible - don't restart if user switched windows
+            if (typeof document !== 'undefined' && !document.hidden) {
+              try {
+                this.recognition.start()
+              } catch (e) {
+                // Already started or page is hidden, ignore
+                if (e instanceof Error && !e.message.includes('already started')) {
+                  console.warn('Speech recognition restart error:', e.message)
+                }
+              }
+            } else {
+              // Page is hidden, stop listening gracefully
+              this.isListening = false
+              console.log('Stopped listening due to page visibility')
             }
           }
         }

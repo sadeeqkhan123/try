@@ -344,12 +344,19 @@ export function useCallSimulation() {
     const sessionManager = sessionManagerRef.current
 
     sttService.startListening((result) => {
-      // Update transcript display in real-time (interim results)
-      sessionManager.setCurrentTranscript(result.text)
-      setSimulatorState(sessionManager.getSimulatorState() || null)
-
-      // Don't auto-process - wait for manual stop via button
-      // This prevents premature processing when user pauses to think
+      try {
+        // Only update state if page is visible to prevent errors
+        if (typeof document !== 'undefined' && !document.hidden) {
+          // Update transcript display in real-time (interim results)
+          sessionManager.setCurrentTranscript(result.text)
+          setSimulatorState(sessionManager.getSimulatorState() || null)
+        }
+        // Don't auto-process - wait for manual stop via button
+        // This prevents premature processing when user pauses to think
+      } catch (error) {
+        // Silently handle state update errors (can happen when page is hidden)
+        console.warn('Error updating transcript state:', error)
+      }
     })
   }, [])
 
@@ -384,9 +391,17 @@ export function useCallSimulation() {
 
     // Start listening - but don't auto-process
     sttService.startListening((result) => {
-      sessionManager.setCurrentTranscript(result.text)
-      setSimulatorState(sessionManager.getSimulatorState() || null)
-      // Don't process final results automatically - wait for button release
+      try {
+        // Only update state if page is visible to prevent errors
+        if (typeof document !== 'undefined' && !document.hidden) {
+          sessionManager.setCurrentTranscript(result.text)
+          setSimulatorState(sessionManager.getSimulatorState() || null)
+        }
+        // Don't process final results automatically - wait for button release
+      } catch (error) {
+        // Silently handle state update errors (can happen when page is hidden)
+        console.warn('Error updating transcript state:', error)
+      }
     })
   }, [isRecording])
 
