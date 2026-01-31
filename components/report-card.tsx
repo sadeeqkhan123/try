@@ -20,7 +20,7 @@ export function ReportCard({ evaluation, onNewSimulation, subtitlesEnabled = fal
   // Animate overall score
   useEffect(() => {
     let current = 0
-    const target = evaluation.overallScore
+    const target = evaluation?.overallScore || 0
     const step = target / 30
 
     const interval = setInterval(() => {
@@ -34,15 +34,24 @@ export function ReportCard({ evaluation, onNewSimulation, subtitlesEnabled = fal
     }, 20)
 
     return () => clearInterval(interval)
-  }, [evaluation.overallScore])
+  }, [evaluation?.overallScore])
 
-  // Prepare category data
+  // Prepare category data with defensive checks
+  // Default to 0 if categoryScores is undefined or missing properties
+  const categoryScores = evaluation?.categoryScores || {
+    introduction: 0,
+    rapport: 0,
+    discovery: 0,
+    objection_handling: 0,
+    closing: 0,
+  }
+
   const categoryData = [
-    { name: "Intro", value: evaluation.categoryScores.introduction, fill: "#06b6d4" },
-    { name: "Rapport", value: evaluation.categoryScores.rapport, fill: "#10b981" },
-    { name: "Discovery", value: evaluation.categoryScores.discovery, fill: "#3b82f6" },
-    { name: "Objections", value: evaluation.categoryScores.objection_handling, fill: "#f97316" },
-    { name: "Closing", value: evaluation.categoryScores.closing, fill: "#ec4899" },
+    { name: "Intro", value: categoryScores.introduction || 0, fill: "#06b6d4" },
+    { name: "Rapport", value: categoryScores.rapport || 0, fill: "#10b981" },
+    { name: "Discovery", value: categoryScores.discovery || 0, fill: "#3b82f6" },
+    { name: "Objections", value: categoryScores.objection_handling || 0, fill: "#f97316" },
+    { name: "Closing", value: categoryScores.closing || 0, fill: "#ec4899" },
   ]
 
   const getScoreColor = (score: number) => {
@@ -64,26 +73,26 @@ export function ReportCard({ evaluation, onNewSimulation, subtitlesEnabled = fal
 AI Prospect Call Evaluation Report
 ==================================
 
-Overall Score: ${evaluation.overallScore}/100
+Overall Score: ${evaluation?.overallScore || 0}/100
 
 Category Scores:
-- Introduction: ${evaluation.categoryScores.introduction}
-- Rapport Building: ${evaluation.categoryScores.rapport}
-- Discovery: ${evaluation.categoryScores.discovery}
-- Objection Handling: ${evaluation.categoryScores.objection_handling}
-- Closing: ${evaluation.categoryScores.closing}
+- Introduction: ${categoryScores.introduction || 0}
+- Rapport Building: ${categoryScores.rapport || 0}
+- Discovery: ${categoryScores.discovery || 0}
+- Objection Handling: ${categoryScores.objection_handling || 0}
+- Closing: ${categoryScores.closing || 0}
 
 Summary:
-${evaluation.summary}
+${evaluation?.summary || 'No summary available'}
 
 Mistakes:
-${evaluation.mistakes.map((m, i) => `${i + 1}. ${m}`).join("\n")}
+${(evaluation?.mistakes || []).map((m, i) => `${i + 1}. ${m}`).join("\n") || 'None'}
 
 Recommendations:
-${evaluation.recommendations.map((r, i) => `${i + 1}. ${r}`).join("\n")}
+${(evaluation?.recommendations || []).map((r, i) => `${i + 1}. ${r}`).join("\n") || 'None'}
 
-Path Accuracy: ${evaluation.nodePathAccuracy.toFixed(1)}%
-Completed Steps: ${evaluation.completedSteps}/${evaluation.totalRequiredSteps}
+Path Accuracy: ${(evaluation?.nodePathAccuracy || 0).toFixed(1)}%
+Completed Steps: ${evaluation?.completedSteps || 0}/${evaluation?.totalRequiredSteps || 0}
     `
 
     navigator.clipboard.writeText(summary.trim())
@@ -182,17 +191,17 @@ Completed Steps: ${evaluation.completedSteps}/${evaluation.totalRequiredSteps}
             <div className="flex flex-col justify-center space-y-4">
               <div>
                 <h3 className="text-lg font-semibold text-white mb-3">Performance Summary</h3>
-                <p className="text-slate-300 leading-relaxed">{evaluation.summary}</p>
+                <p className="text-slate-300 leading-relaxed">{evaluation?.summary || 'No summary available'}</p>
               </div>
 
               <div className="space-y-2 pt-4">
                 <p className="text-xs uppercase tracking-widest text-slate-400">Path Accuracy</p>
                 <div className="flex items-end gap-3">
                   <div className="text-3xl font-mono font-bold text-cyan-300">
-                    {evaluation.nodePathAccuracy.toFixed(1)}%
+                    {(evaluation?.nodePathAccuracy || 0).toFixed(1)}%
                   </div>
                   <div className="text-sm text-slate-400">
-                    {evaluation.completedSteps}/{evaluation.totalRequiredSteps} steps
+                    {evaluation?.completedSteps || 0}/{evaluation?.totalRequiredSteps || 0} steps
                   </div>
                 </div>
               </div>
@@ -230,7 +239,7 @@ Completed Steps: ${evaluation.completedSteps}/${evaluation.totalRequiredSteps}
           <div className="space-y-3">
             <h3 className="text-lg font-semibold text-white">Key Mistakes</h3>
             <div className="space-y-2">
-              {evaluation.mistakes.map((mistake, idx) => (
+              {(evaluation?.mistakes || []).map((mistake, idx) => (
                 <div key={idx} className="flex gap-3 bg-red-500/10 border border-red-500/30 rounded-lg p-3">
                   <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-red-400 mt-0.5">
                     {idx + 1}
@@ -245,7 +254,7 @@ Completed Steps: ${evaluation.completedSteps}/${evaluation.totalRequiredSteps}
           <div className="space-y-3">
             <h3 className="text-lg font-semibold text-white">Things to Practice More</h3>
             <div className="space-y-2">
-              {evaluation.recommendations.map((rec, idx) => (
+              {(evaluation?.recommendations || []).map((rec, idx) => (
                 <div key={idx} className="flex gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
                   <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-emerald-400 mt-0.5">
                     {idx + 1}
